@@ -1,11 +1,19 @@
 use anyhow::{Result};
-use std::fs;
+use std::{fs, io};
+use thiserror::Error;
 
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-pub struct Cache {
-    pub(crate) path: Path,
+pub struct Cache<'a> {
+    pub(crate) path: &'a Path,
+}
+
+impl <'a>  Cache<'a> {
+    pub fn new(path: &'a dyn AsRef<Path>) -> Self {
+        Self { path : path.as_ref()  }
+    }
+    
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq )]
@@ -20,11 +28,16 @@ pub struct State {
    pub location: Location,
 }
 
+#[derive(Debug, Error)]
+pub enum CacheError {
+    #[error("Cache IO Error")]
+    IoError(#[from] io::Error),
+}
 
 impl State {
-    pub fn new(path: &dyn AsRef<Path>) -> Result<Self> {
+    pub fn new(cache: &Cache) -> Result<Self> {
         let res : State;
-        if let Ok(json) = &fs::read(path.as_ref()) {
+        if let Ok(json) = &fs::read(cache.path) {
             res = serde_json::from_str(&String::from_utf8_lossy(json))?;
         } else {
             res = Self {
@@ -34,9 +47,11 @@ impl State {
         Ok(res)
     }
 
-    pub fn set_location(&mut self, location: Location, path: &dyn AsRef<Path>) {
+    pub fn set_location(&mut self, location: Location, cache: &Cache) -> Result<()> {
         self.location = location;
-        fs::write(path.as_ref(), serde_json::to_string(&self).unwrap());
+        fs::write(cache.path, serde_json::to_string(&self).unwrap())
+            .map_err(|err| CacheError::IoError(err))?;
+        Ok(())
     }
 
 }
@@ -51,13 +66,14 @@ mod tests {
         fn remember_state() -> Result<()> {
 
             let temp = Temp::new_file().unwrap().to_path_buf();
-            let mut state = State::new(&temp)?;
+            let cache = Cache::new(&temp);
+            let mut state = State::new(&cache)?;
             assert_eq!(state.location, Location::Unknown);
-            state.set_location(Location::Home, &temp);
+            state.set_location(Location::Home, &cache)?;
             assert_eq!(state.location, Location::Home);
-            let mut state = State::new(&temp)?;
+            let mut state = State::new(&cache)?;
             assert_eq!(state.location, Location::Home);
-            state.set_location(Location::Work, &temp);
+            state.set_location(Location::Work, &cache)?;
             assert_eq!(state.location, Location::Work);
             Ok(())
         }

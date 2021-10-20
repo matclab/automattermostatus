@@ -4,10 +4,10 @@ use std::process::Command;
 
 
 impl WiFi {
-    pub fn new(interface: String) -> Self {
+    pub fn new(interface: &str) -> Self {
         WiFi {
             connection: None,
-            interface: interface,
+            interface: interface.to_owned(),
         }
     }
 }
