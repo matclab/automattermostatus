@@ -1,6 +1,7 @@
 use anyhow::{Result};
 use std::{fs, io};
 use thiserror::Error;
+use tracing::{debug, info};
 
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -44,10 +45,12 @@ impl State {
             location: Location::Unknown,
             };
         }
+        debug!("Previous known location `{:?}`", res.location);
         Ok(res)
     }
 
     pub fn set_location(&mut self, location: Location, cache: &Cache) -> Result<()> {
+        info!("Set location to `{:?}`", location);
         self.location = location;
         fs::write(cache.path, serde_json::to_string(&self).unwrap())
             .map_err(|err| CacheError::IoError(err))?;
