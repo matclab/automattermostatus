@@ -1,7 +1,10 @@
 use anyhow::{bail, Context, Result};
+use mattermost::MMStatus;
+use std::collections::HashMap;
 use std::process::Command;
 use std::time;
 use structopt::clap::AppSettings;
+use shell_words::split;
 
 mod mattermost;
 mod platforms;
@@ -40,12 +43,12 @@ struct Args {
     #[structopt(short = "H", long, env)]
     home_ssid: String,
 
-    /// Home emoji and status (separated by column)
-    #[structopt(long, env, default_value = "home:Travail à domicile")]
+    /// Home emoji and status (separated by two columns)
+    #[structopt(long, env, default_value = "house::Travail à domicile")]
     home_status: String,
     ///
-    /// Work emoji and status (separated by column)
-    #[structopt(long, env, default_value = "systerel:Travail sur site")]
+    /// Work emoji and status (separated by two columns)
+    #[structopt(long, env, default_value = "systerel::Travail sur site")]
     work_status: String,
 
     /// mattermost URL
@@ -77,7 +80,7 @@ struct Args {
     //verbose: i32,
 }
 
-fn get_cache(dir: Option<String>) -> Result<Cache<'static>> {
+fn get_cache(dir: Option<String>) -> Result<Cache> {
     let mut state_file_name: PathBuf;
     if let Some(ref state_dir) = dir {
         state_file_name = PathBuf::from(state_dir);
@@ -88,14 +91,10 @@ fn get_cache(dir: Option<String>) -> Result<Cache<'static>> {
     }
 
     state_file_name.push("automattermostatus.state");
-    Ok(Cache::new(&Box::new(state_file_name)))
+    Ok(Cache::new(state_file_name))
 }
 
-#[paw::main]
-fn main(args: Args) -> Result<()> {
-    // Configure tracing (logging)
-    //tracing_subscriber::fmt::init();
-
+fn setup_tracing(args: &Args) {
     let fmt_layer = fmt::layer().with_target(false);
     let filter_layer = EnvFilter::try_new(args.verbose.get_level_filter().to_string()).unwrap();
 
@@ -103,8 +102,51 @@ fn main(args: Args) -> Result<()> {
         .with(filter_layer)
         .with(fmt_layer)
         .init();
+}
 
-    let cache = get_cache(args.state_dir)?;
+fn update_token(mut args:Args) -> Result<Args> {
+    if let Some(command) = &args.mm_token_cmd {
+        let params = split(&command)?;
+        debug!("Running command {}", command);
+        let output = Command::new(&params[0])
+            .args(&params[1..])
+            .output()
+            .context(format!("Error when running {}", &command))?;
+        let token = String::from_utf8_lossy(&output.stdout);
+        if token.len() == 0 {
+            bail!("command '{}' returns nothing", &command);
+        }
+        //debug!("setting token to {}", token);
+        args.mm_token = Some(token.to_string());
+    }
+    Ok(args)
+}
+
+fn prepare_status(args:&Args) -> Result<HashMap<Location, MMStatus>> {
+    let mut res = HashMap::new();
+    let split : Vec<&str> = args.home_status.split("::").collect();
+    if split.len() != 2 {
+        bail!("Expect home_status argument to contain one and only one :: separator");
+    }
+    res.insert(Location::Home,
+        MMStatus::new(split[1].to_owned(), split[0].to_owned(), args.mm_url.clone(), args.mm_token.clone().unwrap()));
+
+    let split : Vec<&str> = args.work_status.split("::").collect();
+    if split.len() != 2 {
+        bail!("Expect work_status argument to contain one and only one :: separator");
+    }
+    res.insert(Location::Work,
+        MMStatus::new(split[1].to_owned(), split[0].to_owned(), args.mm_url.clone(), args.mm_token.clone().unwrap()));
+    Ok(res)
+}
+
+#[paw::main]
+fn main(args: Args) -> Result<()> {
+
+    setup_tracing(&args);
+    let args = update_token(args)?;
+    let cache = get_cache(args.state_dir.to_owned())?;
+    let status_dict = prepare_status(&args)?;
 
     let mut state = State::new(&cache)?;
     let delay_duration = time::Duration::new(args.delay.into(), 0);
@@ -114,6 +156,7 @@ fn main(args: Args) -> Result<()> {
     } else {
         info!("Wifi is enabled");
     }
+
     loop {
         let ssids = wifi.visible_ssid()?;
         debug!("Visible SSIDs {:#?}", ssids);
@@ -124,16 +167,16 @@ fn main(args: Args) -> Result<()> {
                     "Visible SSID contains both home `{}` and work `{}` wifi",
                     &args.home_ssid, &args.work_ssid,
                 );
-                state.set_location(Location::Unknown, &cache)?;
+                state.update_status(Location::Unknown, &status_dict, &cache)?;
             } else {
-                state.set_location(Location::Work, &cache)?;
+                state.update_status(Location::Work, &status_dict, &cache)?;
             }
         } else if ssids.iter().any(|x| x.contains(&args.home_ssid)) {
             debug!("Home wifi detected");
-            state.set_location(Location::Home, &cache)?;
+            state.update_status(Location::Home, & status_dict,  &cache)?;
         } else {
             debug!("Unknown wifi");
-            state.set_location(Location::Unknown, &cache)?;
+            state.update_status(Location::Unknown, &status_dict, &cache)?;
         }
         if args.delay == 0 {
             break;
