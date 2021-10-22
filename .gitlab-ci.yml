@@ -1,0 +1,59 @@
+.shared_windows_runners:
+  tags:
+  - shared-windows
+  - windows
+  - windows-1809
+
+.macos_buildcloud_runners:
+  tags:
+    - shared-macos-amd64
+  image: macos-11-xcode-12
+
+build-windows:
+    stage: build
+    extends: .shared_windows_runners
+    before_script:
+      - choco feature enable -n=allowGlobalConfirmation
+      - choco install rust
+    script:
+        - cargo build --release 
+    artifacts:
+      paths:
+        - target/release/automattermostatus.exe
+
+test-windows:
+    stage: test
+    extends: .shared_windows_runners
+    before_script:
+      - choco feature enable -n=allowGlobalConfirmation
+      - choco  install rust
+    script:
+        - cargo test 
+
+build:
+    stage: build
+    image: rust
+    script:
+        - cargo build --release 
+    artifacts:
+      paths:
+        - target/release/automattermostatus
+
+test:
+    stage: test
+    image: rust
+    script:
+        - cargo test 
+
+# Not enabled for now
+.build-mac:
+    stage: build
+    extends: .macos_buildcloud_runners
+    before_script:
+      - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+      - rustup install stable
+    script:
+        - cargo build --release 
+    artifacts:
+      paths:
+        - target/release/automattermostatus.exe
