@@ -1,7 +1,6 @@
 use crate::platforms::{ WifiError, WifiInterface, WiFi};
 use std::process::Command;
 
-const WINDOWS_INTERFACE: &'static str = "Wireless Network Connection";
 
 
 impl WiFi {
@@ -29,7 +28,7 @@ impl WifiInterface for WiFi {
                 "wlan",
                 "show",
                 "interface",
-                &format!("name= \"{}\"", WINDOWS_INTERFACE),
+                &format!("name= \"{}\"", self.interface),
             ])
             .output()
             .map_err(|err| WifiError::IoError(err))?;
@@ -44,7 +43,7 @@ impl WifiInterface for WiFi {
                 "interface",
                 "set",
                 "interface",
-                &format!("name= \"{}\"", WINDOWS_INTERFACE),
+                &format!("name= \"{}\"", self.interface),
                 "ENABLED",
             ])
             .output()
@@ -60,7 +59,7 @@ impl WifiInterface for WiFi {
                 "interface",
                 "set",
                 "interface",
-                &format!("name= \"{}\"", WINDOWS_INTERFACE),
+                &format!("name= \"{}\"", self.interface),
                 "DISABLED",
             ])
             .output()
