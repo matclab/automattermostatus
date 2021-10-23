@@ -1,7 +1,5 @@
-use crate::platforms::{ WifiError, WifiInterface, WiFi};
+use crate::platforms::{WiFi, WifiError, WifiInterface};
 use std::process::Command;
-
-
 
 impl WiFi {
     pub fn new(interface: &str) -> Self {
@@ -12,9 +10,17 @@ impl WiFi {
     }
 }
 fn extract_netsh_ssid(netsh_output: &str) -> Vec<String> {
-    netsh_output.split("\n")
+    netsh_output
+        .split("\n")
         .filter(|x| x.starts_with("SSID"))
-        .map(|x| x.split(":").skip(1).collect::<Vec<&str>>().join(":").trim().to_owned())
+        .map(|x| {
+            x.split(":")
+                .skip(1)
+                .collect::<Vec<&str>>()
+                .join(":")
+                .trim()
+                .to_owned()
+        })
         .collect()
 }
 
@@ -110,7 +116,10 @@ SSID 4 : BTOpenzoneXXX
     Encryption              : None
 "#;
 
-            assert_eq!(extract_netsh_ssid(res), ["SKYXXXXX", "SKYXXXXX", "XXXXX", "BTOpenzoneXXX"]);
+            assert_eq!(
+                extract_netsh_ssid(res),
+                ["SKYXXXXX", "SKYXXXXX", "XXXXX", "BTOpenzoneXXX"]
+            );
             Ok(())
         }
     }
