@@ -1,38 +1,36 @@
-use anyhow::{Result, bail, Context};
+use anyhow::{bail, Context, Result};
+use chrono::{DateTime, Utc};
 use std::{collections::HashMap, fs, io};
 use thiserror::Error;
 use tracing::{debug, info};
-use chrono::{DateTime, Utc};
 
+use crate::mattermost::MMStatus;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use crate::mattermost::MMStatus;
 
-
-const MAX_SECS_BEFORE_FORCE_UPDATE: i64 = 60*60;
+const MAX_SECS_BEFORE_FORCE_UPDATE: i64 = 60 * 60;
 
 pub struct Cache {
-    pub(crate) path: PathBuf
+    pub(crate) path: PathBuf,
 }
 
-impl  Cache {
-    pub fn new(path:  impl Into<PathBuf>) -> Self {
-        Self { path : path.into()  }
+impl Cache {
+    pub fn new(path: impl Into<PathBuf>) -> Self {
+        Self { path: path.into() }
     }
-    
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq,Hash )]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 pub enum Location {
     Home,
     Work,
-    Unknown
+    Unknown,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct State {
-   location: Location,
-   timestamp: i64,
+    location: Location,
+    timestamp: i64,
 }
 
 #[derive(Debug, Error)]
@@ -43,21 +41,23 @@ pub enum CacheError {
 
 impl State {
     pub fn new(cache: &Cache) -> Result<Self> {
-        let res : State;
+        let res: State;
         if let Ok(json) = &fs::read(&cache.path) {
-            res = serde_json::from_str(&String::from_utf8_lossy(json))
-                .context(format!("Unable to deserialize state file {:?} (try to remove it)", &cache.path))?;
+            res = serde_json::from_str(&String::from_utf8_lossy(json)).context(format!(
+                "Unable to deserialize state file {:?} (try to remove it)",
+                &cache.path
+            ))?;
         } else {
             res = Self {
-            location: Location::Unknown,
-            timestamp: 0,
+                location: Location::Unknown,
+                timestamp: 0,
             };
         }
         debug!("Previous known location `{:?}`", res.location);
         Ok(res)
     }
 
-    pub fn set_location(&mut self,  location: Location, cache: &Cache) -> Result<()> {
+    pub fn set_location(&mut self, location: Location, cache: &Cache) -> Result<()> {
         info!("Set location to `{:?}`", location);
         self.location = location;
         self.timestamp = Utc::now().timestamp();
@@ -66,18 +66,26 @@ impl State {
         Ok(())
     }
 
-    pub fn update_status(&mut self, location: Location, statusdict: &HashMap<Location, MMStatus>,  cache: &Cache) -> Result<()> {
+    pub fn update_status(
+        &mut self,
+        location: Location,
+        statusdict: &HashMap<Location, MMStatus>,
+        cache: &Cache,
+    ) -> Result<()> {
         if location == self.location {
             // Less than max seconds have elapsed.
             // No need to update MM status again
-            if Utc::now().timestamp() - self.timestamp <=  MAX_SECS_BEFORE_FORCE_UPDATE {
-                debug!("No change for {}s : no update to mattermost status",MAX_SECS_BEFORE_FORCE_UPDATE);
+            if Utc::now().timestamp() - self.timestamp <= MAX_SECS_BEFORE_FORCE_UPDATE {
+                debug!(
+                    "No change for {}s : no update to mattermost status",
+                    MAX_SECS_BEFORE_FORCE_UPDATE
+                );
                 return Ok(());
             }
         } else if location == Location::Unknown {
-            //TODO what ? 
+            //TODO what ?
             return Ok(());
-        } 
+        }
         // We update the status on MM
         if let Some(mmstatus) = statusdict.get(&location) {
             self.set_location(location, cache)?;
@@ -97,7 +105,6 @@ mod tests {
         use mktemp::Temp;
         #[test]
         fn remember_state() -> Result<()> {
-
             let temp = Temp::new_file().unwrap().to_path_buf();
             let cache = Cache::new(&temp);
             let mut state = State::new(&cache)?;
@@ -110,6 +117,5 @@ mod tests {
             assert_eq!(state.location, Location::Work);
             Ok(())
         }
-
     }
 }

@@ -2,9 +2,9 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json as json;
+use std::fmt;
 use thiserror::Error;
 use tracing::{debug, info};
-use std::fmt;
 
 #[derive(Debug, Error)]
 pub enum MMRSError {
@@ -32,7 +32,11 @@ pub struct MMStatus {
 
 impl fmt::Display for MMStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{} (duration: {:?}, expire at: {:?})", self.emoji, self.text, self.duration, self.expires_at)
+        write!(
+            f,
+            "{}:{} (duration: {:?}, expire at: {:?})",
+            self.emoji, self.text, self.duration, self.expires_at
+        )
     }
 }
 
@@ -50,7 +54,7 @@ impl MMStatus {
     }
     /// This function allows us to convert from the struct to a string of JSON which a web server
     /// will accept
-    pub fn to_json(self:&Self) -> Result<String, MMRSError> {
+    pub fn to_json(self: &Self) -> Result<String, MMRSError> {
         json::to_string(&self).map_err(MMRSError::BadJSONData)
     }
 
