@@ -1,10 +1,11 @@
+#!doc[ = include_str!("README.md")]
 use anyhow::{bail, Context, Result};
 use mattermost::MMStatus;
+use shell_words::split;
 use std::collections::HashMap;
 use std::process::Command;
 use std::time;
 use structopt::clap::AppSettings;
-use shell_words::split;
 
 mod mattermost;
 mod platforms;
@@ -28,6 +29,8 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry}; // to 
 #[structopt(global_settings(&[AppSettings::ColoredHelp, AppSettings::ColorAuto]))]
 struct Args {
     /// wifi interface name
+    //const WINDOWS_INTERFACE: &'static str = "Wireless Network Connection";
+    // en0 for mac
     #[structopt(short, long, env, default_value = "wlan0")]
     interface_name: String,
 
@@ -104,7 +107,7 @@ fn setup_tracing(args: &Args) {
         .init();
 }
 
-fn update_token(mut args:Args) -> Result<Args> {
+fn update_token(mut args: Args) -> Result<Args> {
     if let Some(command) = &args.mm_token_cmd {
         let params = split(&command)?;
         debug!("Running command {}", command);
@@ -122,27 +125,40 @@ fn update_token(mut args:Args) -> Result<Args> {
     Ok(args)
 }
 
-fn prepare_status(args:&Args) -> Result<HashMap<Location, MMStatus>> {
+fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
     let mut res = HashMap::new();
-    let split : Vec<&str> = args.home_status.split("::").collect();
+    let split: Vec<&str> = args.home_status.split("::").collect();
     if split.len() != 2 {
         bail!("Expect home_status argument to contain one and only one :: separator");
     }
-    res.insert(Location::Home,
-        MMStatus::new(split[1].to_owned(), split[0].to_owned(), args.mm_url.clone(), args.mm_token.clone().unwrap()));
+    res.insert(
+        Location::Home,
+        MMStatus::new(
+            split[1].to_owned(),
+            split[0].to_owned(),
+            args.mm_url.clone(),
+            args.mm_token.clone().unwrap(),
+        ),
+    );
 
-    let split : Vec<&str> = args.work_status.split("::").collect();
+    let split: Vec<&str> = args.work_status.split("::").collect();
     if split.len() != 2 {
         bail!("Expect work_status argument to contain one and only one :: separator");
     }
-    res.insert(Location::Work,
-        MMStatus::new(split[1].to_owned(), split[0].to_owned(), args.mm_url.clone(), args.mm_token.clone().unwrap()));
+    res.insert(
+        Location::Work,
+        MMStatus::new(
+            split[1].to_owned(),
+            split[0].to_owned(),
+            args.mm_url.clone(),
+            args.mm_token.clone().unwrap(),
+        ),
+    );
     Ok(res)
 }
 
 #[paw::main]
 fn main(args: Args) -> Result<()> {
-
     setup_tracing(&args);
     let args = update_token(args)?;
     let cache = get_cache(args.state_dir.to_owned())?;
@@ -173,7 +189,7 @@ fn main(args: Args) -> Result<()> {
             }
         } else if ssids.iter().any(|x| x.contains(&args.home_ssid)) {
             debug!("Home wifi detected");
-            state.update_status(Location::Home, & status_dict,  &cache)?;
+            state.update_status(Location::Home, &status_dict, &cache)?;
         } else {
             debug!("Unknown wifi");
             state.update_status(Location::Unknown, &status_dict, &cache)?;
