@@ -4,8 +4,15 @@
 mod linux;
 #[cfg(target_os = "macos")]
 mod osx;
+#[cfg(any(test, target_os = "macos"))]
+mod osx_parse;
 #[cfg(target_os = "windows")]
 mod windows;
+#[cfg(any(test, target_os = "windows"))]
+mod windows_parse;
+// We include all modules for tests as tests do not depend upon specific platform
+//#[cfg(test)]
+//mod osx;
 
 use std::{fmt, io};
 use thiserror::Error;

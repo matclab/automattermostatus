@@ -1,7 +1,5 @@
-use crate::platforms::{ WifiError, WifiInterface, WiFi};
+use crate::platforms::{WiFi, WifiError, WifiInterface};
 use std::process::Command;
-
-
 
 impl WiFi {
     pub fn new(interface: &str) -> Self {
@@ -50,11 +48,10 @@ impl WifiInterface for WiFi {
 
     fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {
         let output = Command::new("nmcli")
-            .args(&["-t", "-m", "tabular", "-f", "SSID", "device",  "wifi"])
+            .args(&["-t", "-m", "tabular", "-f", "SSID", "device", "wifi"])
             .output()
             .map_err(|err| WifiError::IoError(err))?;
-        let stdout=String::from_utf8_lossy(&output.stdout).to_owned();
+        let stdout = String::from_utf8_lossy(&output.stdout).to_owned();
         Ok(stdout.split("\n").map(str::to_string).collect())
-        
     }
 }
