@@ -1,88 +1,25 @@
 #!doc[ = include_str!("README.md")]
 use anyhow::{bail, Context, Result};
-use mattermost::MMStatus;
+use ::lib::mattermost::MMStatus;
 use shell_words::split;
 use std::collections::HashMap;
 use std::process::Command;
 use std::time;
-use structopt::clap::AppSettings;
 
-mod mattermost;
-mod platforms;
-use platforms::{WiFi, WifiInterface};
-use std::env;
-use std::path::{Path, PathBuf};
-use std::thread::sleep;
-mod state;
-use state::{Cache, Location, State};
-//use tracing::subscriber:: set_global_default;
+use ::lib::config::{Args,WifiStatusConfig};
+use ::lib::platforms::{WiFi, WifiInterface};
 use structopt_flags::LogLevel;
-use tracing::{debug, error, info, span, warn, Level};
+use std::env;
+use std::path:: PathBuf;
+use std::thread::sleep;
+use ::lib::state::{Cache, Location, State};
+//use tracing::subscriber:: set_global_default;
+use tracing::{debug, info};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry}; // to access get_log_level
 
-#[derive(structopt::StructOpt)]
-/// Automate mattermost status with the help of wifi network
-///
-/// Use current available SSID of wifi networks to automate your mattermost status.
-/// This program is mean to be call regularly and will update status according to the config file
-#[structopt(global_settings(&[AppSettings::ColoredHelp, AppSettings::ColorAuto]))]
-struct Args {
-    /// wifi interface name
-    //const WINDOWS_INTERFACE: &'static str = "Wireless Network Connection";
-    // en0 for mac
-    #[structopt(short, long, env, default_value = "wlan0")]
-    interface_name: String,
 
-    /// work SSID substring
-    ///
-    /// string that shall be contains in a visible SSID to be considered at work
-    #[structopt(short = "W", long, env)]
-    work_ssid: String,
-
-    /// home SSID substring
-    ///
-    /// string that shall be contains in a visible SSID to be considered at home
-    #[structopt(short = "H", long, env)]
-    home_ssid: String,
-
-    /// Home emoji and status (separated by two columns)
-    #[structopt(long, env, default_value = "house::Travail à domicile")]
-    home_status: String,
-    ///
-    /// Work emoji and status (separated by two columns)
-    #[structopt(long, env, default_value = "systerel::Travail sur site")]
-    work_status: String,
-
-    /// mattermost URL
-    #[structopt(short = "u", long, env)]
-    mm_url: String,
-
-    /// mattermost private Token
-    #[structopt(long, env, hide_env_values = true)]
-    mm_token: Option<String>,
-
-    /// mattermost private Token command
-    #[structopt(long, env)]
-    mm_token_cmd: Option<String>,
-
-    /// directory for state file
-    ///
-    /// Will use content of XDG_CACHE_HOME if unset.
-    #[structopt(long, env)]
-    state_dir: Option<String>,
-
-    /// delay between wifi SSID polling in seconds
-    #[structopt(long, env, default_value = "60")]
-    delay: u8,
-
-    #[structopt(flatten)]
-    verbose: structopt_flags::QuietVerbose,
-    // A level of verbosity, and can be used multiple times
-    //#[structopt(short, long, parse(from_occurrences))]
-    //verbose: i32,
-}
-
+/// Return a `Cache` used to persist state.
 fn get_cache(dir: Option<String>) -> Result<Cache> {
     let mut state_file_name: PathBuf;
     if let Some(ref state_dir) = dir {
@@ -97,6 +34,7 @@ fn get_cache(dir: Option<String>) -> Result<Cache> {
     Ok(Cache::new(state_file_name))
 }
 
+/// Setup logging to stdout
 fn setup_tracing(args: &Args) {
     let fmt_layer = fmt::layer().with_target(false);
     let filter_layer = EnvFilter::try_new(args.verbose.get_level_filter().to_string()).unwrap();
@@ -107,7 +45,9 @@ fn setup_tracing(args: &Args) {
         .init();
 }
 
-fn update_token(mut args: Args) -> Result<Args> {
+/// Update `args.mm_token` with the standard output of
+/// `args.mm_token_cmd` if defined.
+fn update_token_with_command(mut args: Args) -> Result<Args> {
     if let Some(command) = &args.mm_token_cmd {
         let params = split(&command)?;
         debug!("Running command {}", command);
@@ -119,48 +59,37 @@ fn update_token(mut args: Args) -> Result<Args> {
         if token.len() == 0 {
             bail!("command '{}' returns nothing", &command);
         }
+        // Do not spit secret on stdout on released binary.
         //debug!("setting token to {}", token);
         args.mm_token = Some(token.to_string());
     }
     Ok(args)
 }
 
+/// Prepare a dictionnary of `Status` ready to be send to mattermost
+/// server depending upon the location being found.
 fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
     let mut res = HashMap::new();
-    let split: Vec<&str> = args.home_status.split("::").collect();
-    if split.len() != 2 {
-        bail!("Expect home_status argument to contain one and only one :: separator");
+    for s in &args.status {
+        let sc: WifiStatusConfig = s.parse()?;
+        debug!("Adding : {:?}", sc);
+        res.insert(
+            Location::Known(sc.wifi_string),
+            MMStatus::new(
+                sc.text,
+                sc.emoji,
+                args.mm_url.clone(),
+                args.mm_token.clone().unwrap(),
+            ),
+        );
     }
-    res.insert(
-        Location::Home,
-        MMStatus::new(
-            split[1].to_owned(),
-            split[0].to_owned(),
-            args.mm_url.clone(),
-            args.mm_token.clone().unwrap(),
-        ),
-    );
-
-    let split: Vec<&str> = args.work_status.split("::").collect();
-    if split.len() != 2 {
-        bail!("Expect work_status argument to contain one and only one :: separator");
-    }
-    res.insert(
-        Location::Work,
-        MMStatus::new(
-            split[1].to_owned(),
-            split[0].to_owned(),
-            args.mm_url.clone(),
-            args.mm_token.clone().unwrap(),
-        ),
-    );
     Ok(res)
 }
 
 #[paw::main]
 fn main(args: Args) -> Result<()> {
     setup_tracing(&args);
-    let args = update_token(args)?;
+    let args = update_token_with_command(args)?;
     let cache = get_cache(args.state_dir.to_owned())?;
     let status_dict = prepare_status(&args)?;
 
@@ -176,21 +105,18 @@ fn main(args: Args) -> Result<()> {
     loop {
         let ssids = wifi.visible_ssid()?;
         debug!("Visible SSIDs {:#?}", ssids);
-        if ssids.iter().any(|x| x.contains(&args.work_ssid)) {
-            debug!("Work wifi detected");
-            if ssids.iter().any(|x| x.contains(&args.home_ssid)) {
-                warn!(
-                    "Visible SSID contains both home `{}` and work `{}` wifi",
-                    &args.home_ssid, &args.work_ssid,
-                );
-                state.update_status(Location::Unknown, &status_dict, &cache)?;
-            } else {
-                state.update_status(Location::Work, &status_dict, &cache)?;
+        let mut found_ssid = false;
+        for l in status_dict.keys() {
+            if let Location::Known(wifi_substring) = l {
+                if ssids.iter().any(|x| x.contains(wifi_substring)) {
+                    debug!("{} wifi detected", wifi_substring);
+                    found_ssid = true;
+                    let loc  = l.clone();
+                    state.update_status(loc, &status_dict, &cache)?;
+                }
             }
-        } else if ssids.iter().any(|x| x.contains(&args.home_ssid)) {
-            debug!("Home wifi detected");
-            state.update_status(Location::Home, &status_dict, &cache)?;
-        } else {
+        }
+        if !found_ssid {
             debug!("Unknown wifi");
             state.update_status(Location::Unknown, &status_dict, &cache)?;
         }

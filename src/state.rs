@@ -20,10 +20,9 @@ impl Cache {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Location {
-    Home,
-    Work,
+    Known(String),
     Unknown,
 }
 
@@ -72,7 +71,10 @@ impl State {
         statusdict: &HashMap<Location, MMStatus>,
         cache: &Cache,
     ) -> Result<()> {
-        if location == self.location {
+        if location == Location::Unknown {
+            return Ok(());
+        }
+        else if location == self.location {
             // Less than max seconds have elapsed.
             // No need to update MM status again
             if Utc::now().timestamp() - self.timestamp <= MAX_SECS_BEFORE_FORCE_UPDATE {
@@ -82,9 +84,6 @@ impl State {
                 );
                 return Ok(());
             }
-        } else if location == Location::Unknown {
-            //TODO what ?
-            return Ok(());
         }
         // We update the status on MM
         if let Some(mmstatus) = statusdict.get(&location) {
@@ -109,12 +108,12 @@ mod tests {
             let cache = Cache::new(&temp);
             let mut state = State::new(&cache)?;
             assert_eq!(state.location, Location::Unknown);
-            state.set_location(Location::Home, &cache)?;
-            assert_eq!(state.location, Location::Home);
+            state.set_location(Location::Known("abcd".to_string()), &cache)?;
+            assert_eq!(state.location, Location::Known("abcd".to_string()));
             let mut state = State::new(&cache)?;
-            assert_eq!(state.location, Location::Home);
-            state.set_location(Location::Work, &cache)?;
-            assert_eq!(state.location, Location::Work);
+            assert_eq!(state.location, Location::Known("abcd".to_string()));
+            state.set_location(Location::Known("work".to_string()), &cache)?;
+            assert_eq!(state.location, Location::Known("work".to_string()));
             Ok(())
         }
     }
