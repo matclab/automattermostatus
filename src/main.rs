@@ -5,29 +5,27 @@ use shell_words::split;
 use std::collections::HashMap;
 use std::process::Command;
 use std::time;
+use figment::{Figment, providers::{Serialized}};
 
 use ::lib::config::{Args,WifiStatusConfig};
 use ::lib::platforms::{WiFi, WifiInterface};
-use structopt_flags::LogLevel;
-use std::env;
 use std::path:: PathBuf;
 use std::thread::sleep;
 use ::lib::state::{Cache, Location, State};
 //use tracing::subscriber:: set_global_default;
 use tracing::{debug, info};
 use tracing_subscriber::prelude::*;
-use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry}; // to access get_log_level
+use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter}; // to access get_log_level
+use tracing_log::LogTracer;
 
 
 /// Return a `Cache` used to persist state.
-fn get_cache(dir: Option<String>) -> Result<Cache> {
+fn get_cache(dir: Option<PathBuf>) -> Result<Cache> {
     let mut state_file_name: PathBuf;
     if let Some(ref state_dir) = dir {
         state_file_name = PathBuf::from(state_dir);
     } else {
-        state_file_name = PathBuf::from(
-            env::var("XDG_CACHE_HOME").context(
-                "No state directory defined neither from --state-dir option nor XDG_CACHE_HOME variable")?);
+        bail!("Internal Error, no `state_dir` configured");
     }
 
     state_file_name.push("automattermostatus.state");
@@ -35,7 +33,7 @@ fn get_cache(dir: Option<String>) -> Result<Cache> {
 }
 
 /// Setup logging to stdout
-fn setup_tracing(args: &Args) {
+fn setup_tracing(args: &Args) -> Result<()> {
     let fmt_layer = fmt::layer().with_target(false);
     let filter_layer = EnvFilter::try_new(args.verbose.get_level_filter().to_string()).unwrap();
 
@@ -43,6 +41,9 @@ fn setup_tracing(args: &Args) {
         .with(filter_layer)
         .with(fmt_layer)
         .init();
+    LogTracer::init()?;
+    Ok(())
+
 }
 
 /// Update `args.mm_token` with the standard output of
@@ -78,7 +79,7 @@ fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
             MMStatus::new(
                 sc.text,
                 sc.emoji,
-                args.mm_url.clone(),
+                args.mm_url.as_ref().unwrap().clone(),
                 args.mm_token.clone().unwrap(),
             ),
         );
@@ -88,14 +89,19 @@ fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
 
 #[paw::main]
 fn main(args: Args) -> Result<()> {
-    setup_tracing(&args);
+    setup_tracing(&args)?;
+    let cfg : Args = confy::load("automattermostatus")?;
+    let args = Figment::from(Serialized::defaults(Args::default()))
+    .merge(Serialized::defaults(args))
+    .merge(Serialized::defaults(cfg)).extract()?;
+    debug!("Args : {:#?}", args);
     let args = update_token_with_command(args)?;
     let cache = get_cache(args.state_dir.to_owned())?;
     let status_dict = prepare_status(&args)?;
 
     let mut state = State::new(&cache)?;
-    let delay_duration = time::Duration::new(args.delay.into(), 0);
-    let wifi = WiFi::new(&args.interface_name);
+    let delay_duration = time::Duration::new(args.delay.unwrap().into(), 0);
+    let wifi = WiFi::new(&args.interface_name.unwrap());
     if !wifi.is_wifi_enabled()? {
         bail!("wifi is disabled");
     } else {
@@ -120,7 +126,7 @@ fn main(args: Args) -> Result<()> {
             debug!("Unknown wifi");
             state.update_status(Location::Unknown, &status_dict, &cache)?;
         }
-        if args.delay == 0 {
+        if let Some(0) = args.delay {
             break;
         } else {
             sleep(delay_duration);

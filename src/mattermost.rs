@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json as json;
 use std::fmt;
 use thiserror::Error;
-use tracing::{debug, info};
+use tracing::debug;
 
 #[derive(Debug, Error)]
 pub enum MMRSError {

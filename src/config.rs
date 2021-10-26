@@ -1,9 +1,13 @@
+use directories_next::ProjectDirs;
 /// This module olds struct and helpers for parameters and configuration
 use ::structopt::clap::AppSettings;
 use anyhow::{bail, Result};
-use structopt_flags;
+use tracing::{debug};
+use serde::{Serialize,Deserialize,Serializer,Deserializer};
+use std::path::PathBuf;
 use anyhow;
 use structopt;
+
 
 
 /// Object olding the configuration describing status that shall be send when 
@@ -69,7 +73,92 @@ impl std::str::FromStr for Status {
     }
 }
 
-#[derive(structopt::StructOpt)]
+// Courtesy of structopt_flags crate
+#[derive(structopt::StructOpt, Debug, Clone)]
+pub struct QuietVerbose {
+    /// Increase the output's verbosity level
+    ///
+    /// Pass many times to increase verbosity level, up to 3.
+    #[structopt(
+        name = "quietverbose",
+        long = "verbose",
+        short = "v",
+        parse(from_occurrences),
+        conflicts_with = "quietquiet",
+        global = true,
+    )]
+    verbosity_level: u8,
+
+    /// Decrease the output's verbosity level.
+    ///
+    /// Used once, it will set error log level.
+    /// Used twice, will silent the log completely
+    #[structopt(
+        name = "quietquiet",
+        long = "quiet",
+        short = "q",
+        parse(from_occurrences),
+        conflicts_with = "quietverbose",
+        global = true
+    )]
+    quiet_level: u8,
+}
+
+impl Default for QuietVerbose {
+    fn default() -> Self {
+        QuietVerbose { verbosity_level: 1, quiet_level: 0 }
+    }
+}
+
+impl Serialize for QuietVerbose {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.get_level_filter())
+    }
+}
+
+fn de_from_str<'de, D>(deserializer: D) -> Result<QuietVerbose, D::Error>
+    where D: Deserializer<'de>
+{
+    let s = String::deserialize(deserializer)?;
+    match s.to_ascii_lowercase().as_ref() {
+        "off" => Ok(QuietVerbose{ verbosity_level: 0, quiet_level: 2}),
+        "error" => Ok(QuietVerbose{ verbosity_level: 0, quiet_level: 1}),
+        "warn" => Ok(QuietVerbose{ verbosity_level: 0, quiet_level:0}),
+        "info" => Ok(QuietVerbose{ verbosity_level: 1, quiet_level:0}),
+        "debug" => Ok(QuietVerbose{ verbosity_level: 2, quiet_level:0}),
+        _ => Ok(QuietVerbose{ verbosity_level: 3, quiet_level:0}),
+
+    }
+}
+
+
+impl QuietVerbose {
+    pub fn get_level_filter(&self) -> &str {
+        let quiet: i8 = if self.quiet_level > 1 {
+            2
+        } else {
+            self.quiet_level as i8
+        };
+        let verbose: i8 = if self.verbosity_level > 2 {
+            3
+        } else {
+            self.verbosity_level as i8
+        };
+        match verbose - quiet {
+            -2 => "Off",
+            -1 => "Error",
+            0 => "Warn",
+            1 => "Info",
+            2 => "Debug",
+            _ => "Trace",
+        }
+    }
+}
+
+#[derive(structopt::StructOpt,Serialize,Deserialize,Debug)]
 /// Automate mattermost status with the help of wifi network
 ///
 /// Use current available SSID of wifi networks to automate your mattermost status.
@@ -77,10 +166,9 @@ impl std::str::FromStr for Status {
 #[structopt(global_settings(&[AppSettings::ColoredHelp, AppSettings::ColorAuto]))]
 pub struct Args {
     /// wifi interface name
-    //const WINDOWS_INTERFACE: &'static str = "Wireless Network Connection";
-    // en0 for mac
-    #[structopt(short, long, env, default_value = "wlan0")]
-    pub interface_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[structopt(short, long, env)]
+    pub interface_name: Option<String>,
 
 
     /// Status configuration triplets (:: separated)
@@ -90,35 +178,59 @@ pub struct Args {
     #[structopt(
         short,
         long,
-        default_value = "[systerel::systerel::Travail sur site，clabautnet::house::Travail à domicile]"
     )]
     pub status: Vec<String>,
 
     /// mattermost URL
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[structopt(short = "u", long, env)]
-    pub mm_url: String,
+    pub mm_url: Option<String>,
 
     /// mattermost private Token
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[structopt(long, env, hide_env_values = true)]
     pub mm_token: Option<String>,
 
     /// mattermost private Token command
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[structopt(long, env)]
     pub mm_token_cmd: Option<String>,
 
     /// directory for state file
     ///
     /// Will use content of XDG_CACHE_HOME if unset.
-    #[structopt(long, env)]
-    pub state_dir: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[structopt(long, env, parse(from_os_str))]
+    pub state_dir: Option<PathBuf>,
 
     /// delay between wifi SSID polling in seconds
-    #[structopt(long, env, default_value = "60")]
-    pub delay: u8,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[structopt(long, env)]
+    pub delay: Option<u8>,
 
     #[structopt(flatten)]
-    pub verbose: structopt_flags::QuietVerbose,
-    // A level of verbosity, and can be used multiple times
-    //#[structopt(short, long, parse(from_occurrences))]
-    //verbose: i32,
+    #[serde(deserialize_with = "de_from_str")]
+    pub verbose: QuietVerbose,
+}
+
+impl Default for Args {
+    fn default() -> Args {
+        let res = Args {
+            #[cfg(target_os = "linux")]
+            interface_name: Some("wlan0".into()),
+            #[cfg(target_os = "windows")]
+            interface_name: Some("Wireless Network Connection".into()),
+            #[cfg(target_os = "macos")]
+            interface_name: Some("en0".into()),
+            status : [].to_vec(),
+            delay: Some(60),
+            state_dir: Some(ProjectDirs::from("net", "clabaut", "automattermostatus").unwrap().cache_dir().to_owned()), 
+            mm_token : None,
+            mm_token_cmd : None,
+            mm_url : Some("https://mattermost.com".into()),
+            verbose : QuietVerbose{ verbosity_level :1, quiet_level : 0},
+        };
+        debug!("Args::default : {:#?}", res);
+        res
+    }
 }
