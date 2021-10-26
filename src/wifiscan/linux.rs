@@ -1,4 +1,4 @@
-use crate::platforms::{WiFi, WifiError, WifiInterface};
+use crate::wifiscan::{WiFi, WifiError, WifiInterface};
 use std::process::Command;
 
 impl WiFi {

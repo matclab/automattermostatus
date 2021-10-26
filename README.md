@@ -1,44 +1,109 @@
 # auto*mat-termo-st*atus
+Automate your mattermost custom status with the help of visible wifi SSID.
+Development site is hosted on [gitlab](https://gitlab.com/matclab/automattermostatus).
 
 ## Usage
-<!-- `$ target/debug/automattermostatus -h` as text -->
+Here after is the command line help.
+<!-- `$ target/debug/automattermostatus --help` as text -->
 ```text
 automattermostatus 0.1.0
 Automate mattermost status with the help of wifi network
 
-Use current available SSID of wifi networks to automate your mattermost status. This program is mean to be call
-regularly and will update status according to the config file
+Use current visible wifi SSID to automate your mattermost status. This program is meant to either be running in
+background or be call regularly with option `--delay 0`. It will then update your mattermost custom status according to
+the config file
 
 USAGE:
-    automattermostatus [FLAGS] [OPTIONS] --home-ssid <home-ssid> --mm-url <mm-url> --work-ssid <work-ssid>
+    automattermostatus [FLAGS] [OPTIONS]
 
 FLAGS:
-    -h, --help       Prints help information
-    -q, --quiet      Decrease the output's verbosity level Used once, it will set error log level. Used twice, will
-                     slient the log completely
-    -v, --verbose    Increase the output's verbosity level Pass many times to increase verbosity level, up to 3
-    -V, --version    Prints version information
+    -h, --help       
+            Prints help information
+
+    -q, --quiet      
+            Decrease the output's verbosity level.
+            
+            Used once, it will set error log level. Used twice, will silent the log completely
+    -v, --verbose    
+            Increase the output's verbosity level
+            
+            Pass many times to increase verbosity level, up to 3.
+    -V, --version    
+            Prints version information
+
 
 OPTIONS:
-        --delay <delay>                      delay between wifi SSID polling in seconds [env: DELAY=]  [default: 60]
-    -H, --home-ssid <home-ssid>              home SSID substring [env: HOME_SSID=]
-        --home-status <home-status>          Home emoji and status (separated by two columns) [env: HOME_STATUS=]
-                                             [default: house::Travail à domicile]
-    -i, --interface-name <interface-name>    wifi interface name [env: INTERFACE_NAME=]  [default: wlan0]
-        --mm-token <mm-token>                mattermost private Token [env: MM_TOKEN]
-        --mm-token-cmd <mm-token-cmd>        mattermost private Token command [env: MM_TOKEN_CMD=]
-    -u, --mm-url <mm-url>                    mattermost URL [env: MM_URL=]
-        --state-dir <state-dir>              directory for state file [env: STATE_DIR=]
-    -W, --work-ssid <work-ssid>              work SSID substring [env: WORK_SSID=]
-        --work-status <work-status>          Work emoji and status (separated by two columns) [env: WORK_STATUS=]
-                                             [default: systerel::Travail sur site]
+        --delay <delay>                      
+            delay between wifi SSID polling in seconds [env: DELAY=]
+
+    -i, --interface-name <interface-name>    
+            wifi interface name [env: INTERFACE_NAME=]
+
+        --mm-token <mm-token>                
+            mattermost private Token
+            
+            Usage of this option may leak your personal token. It is recommended to use `mm_token_cmd`. [env: MM_TOKEN]
+        --mm-token-cmd <mm-token-cmd>        
+            mattermost private Token command [env: MM_TOKEN_CMD=]
+
+    -u, --mm-url <mm-url>                    
+            mattermost URL [env: MM_URL=]
+
+        --state-dir <state-dir>              
+            directory for state file
+            
+            Will use content of XDG_CACHE_HOME if unset. [env: STATE_DIR=]
+    -s, --status <status>...                 
+            Status configuration triplets (:: separated)
+            
+            Each triplet shall have the format: "wifi_substring::emoji_name::status_text"
+```
+## Configuration
+*Automattermostatus* get configuration from both a config file and a command
+line.
+
+### Config File
+The config file is created if it does not exist.  It is created or read in the following places depending on your OS:
+-    the [XDG user directory](https://www.freedesktop.org/wiki/Software/xdg-user-dirs/) specifications on Linux (usually `~/.config/automattermostatus/automattermostatus.toml`),
+-    the [Known Folder system](https://msdn.microsoft.com/en-us/library/windows/desktop/dd378457.aspx) on Windows (usually `{FOLDERID_RoamingAppData}/automattermostatus/config`),
+-    the [Standard Directories](https://developer.apple.com/library/content/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html#//apple_ref/doc/uid/TP40010672-CH2-SW6) on macOS (usually `$HOME/Library/Application Support/<project_path>`).
+
+A sample config file is:
+
+```toml
+interface_name = 'wlp0s20f3'
+status = ["corporatewifi::work::On premise work",
+	  "homenet::house::Working home"]
+mm_url = 'https://mattermost.example.com'
+verbose = 'Info'
+mm_token_cmd = "secret-tool lookup name automattermostatus"
+```
+### Mattermost private token
+Your private token is availabe under `Account Parameters > Security > Personal
+Access Token`. You should avoid to use `mm_token` parameter as it may leak
+your token to other people having access to your computer. It is recommended
+to use the `mm_token_cmd` option. 
+
+For example, on linux you may use `secret-tool`:
+```sh
+# store your token (it will ask you the token)
+secret-tool store --label='token' name automattermostatus
+# use the following command in `mm_token_cmd` to retrieve your token:
+secret-tool lookup name automattermostatus
+```
+or the `keyring` command:
+```sh
+# store your token (it will ask you the token)
+keyring set automattermostatus token
+# use the following command in `mm_token_cmd` to retrieve your token:
+keyring get automattermostatus token
 ```
 
+I'll be pleased to insert here example for Windows and Mac OS. 
 
 ## Installation
 You can either compile yourself or download the latest binaries from the
 [release page](https://gitlab.com/matclab/automattermostatus/-/releases).
-
 
 ## Compilation
 
@@ -50,7 +115,7 @@ The binaries are then found in the `target/release` directory.
 
 # License
 
-Licensed under Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE) or https://www.apache.org/licenses/LICENSE-2.0)
+Licensed under Apache License, Version 2.0 ([LICENSE-APACHE](https://www.apache.org/licenses/LICENSE-2.0)).
 
 ## Contribution
 
@@ -58,3 +123,15 @@ Unless you explicitly state otherwise, any contribution intentionally
 submitted for inclusion in the work by you, as defined in the Apache-2.0
 license, shall be licensed as above, without any additional terms or
 conditions.
+
+### Issues
+You may open issues or feature requests on [the gitlab issue
+page](https://gitlab.com/matclab/automattermostatus/-/issues).
+
+### Patch or Features
+You may [fork](https://gitlab.com/matclab/automattermostatus/-/forks/new) the
+project on gitlab, develop your patch or feature on a new branch and submit a
+new merge request after having push back to your forked repo.
+
+Do not hesitate to open a issue beforehand to discuss the bug fix strategy or
+to ask about the feature you imagine.

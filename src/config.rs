@@ -1,4 +1,5 @@
 /// This module olds struct and helpers for parameters and configuration
+///
 use ::structopt::clap::AppSettings;
 use anyhow;
 use anyhow::{bail, Result};
@@ -8,8 +9,7 @@ use std::path::PathBuf;
 use structopt;
 use tracing::debug;
 
-/// Object olding the configuration describing status that shall be send when
-/// a wifi with `wifi_string` is being seen.
+/// Status that shall be send when a wifi with `wifi_string` is being seen.
 #[derive(Debug, PartialEq)]
 pub struct WifiStatusConfig {
     pub wifi_string: String,
@@ -18,7 +18,7 @@ pub struct WifiStatusConfig {
 }
 
 /// Implement FromStr for WifiStatusConfig which allows to call `parse` from a
-/// parameter:
+/// string representation:
 /// ```
 /// use lib::config::WifiStatusConfig;
 /// let wsc : WifiStatusConfig = "wifinet::house::Working home".parse().unwrap();
@@ -42,32 +42,6 @@ impl std::str::FromStr for WifiStatusConfig {
             emoji: splitted[1].to_owned(),
             text: splitted[2].to_owned(),
         })
-    }
-}
-
-/// Implement FromStr for WifiStatusConfig.
-/// Only use for StructOpt `default_value`
-pub struct Status(Vec<WifiStatusConfig>);
-impl std::str::FromStr for Status {
-    type Err = anyhow::Error;
-    // Convert "[ aaa::bbb:ccc， ddd:eee:fff ]" in Status struct
-    // Only used for default parameter oo structopt status field
-    // Note the use of a special UTF8 FullWidth comma :，
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.chars().next() != Some('[') {
-            bail!("Expect '[' as first char (in '{}')", &s);
-        }
-        if s.chars().last() != Some(']') {
-            bail!("Expect ']' as last char (in '{}')", &s);
-        }
-        match s
-            .split("，")
-            .map(|x| x.trim().parse())
-            .collect::<Result<Vec<WifiStatusConfig>, _>>()
-        {
-            Ok(v) => Ok(Status(v)),
-            Err(v) => Err(v),
-        }
     }
 }
 
@@ -179,8 +153,10 @@ impl QuietVerbose {
 #[derive(structopt::StructOpt, Serialize, Deserialize, Debug)]
 /// Automate mattermost status with the help of wifi network
 ///
-/// Use current available SSID of wifi networks to automate your mattermost status.
-/// This program is mean to be call regularly and will update status according to the config file
+/// Use current visible wifi SSID to automate your mattermost status.
+/// This program is meant to either be running in background or be call regularly
+/// with option `--delay 0`.
+/// It will then update your mattermost custom status according to the config file
 #[structopt(global_settings(&[AppSettings::ColoredHelp, AppSettings::ColorAuto]))]
 pub struct Args {
     /// wifi interface name
@@ -201,6 +177,9 @@ pub struct Args {
     pub mm_url: Option<String>,
 
     /// mattermost private Token
+    ///
+    /// Usage of this option may leak your personal token. It is recommended to
+    /// use `mm_token_cmd`.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[structopt(long, env, hide_env_values = true)]
     pub mm_token: Option<String>,

@@ -8,7 +8,7 @@ clippy:
 	cargo clippy 
 
 doc: README.md
-	 cargo doc  --no-deps
+	 cargo doc  --no-deps --bins
 
 .PHONY: target/debug/automattermostatus
 

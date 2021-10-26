@@ -75,15 +75,21 @@ impl State {
         Ok(())
     }
 
+    /// Update mattermost status depending upon current state
+    ///
+    /// If `current_location` is Unknown, then nothing is changed.
+    /// If `current_location` is still the same for more than `MAX_SECS_BEFORE_FORCE_UPDATE`
+    /// then we force update the mattermost status in order to catch up with desynchronise state
+    /// Else we update mattermost status to the one associated to `current_location`.
     pub fn update_status(
         &mut self,
-        location: Location,
+        current_location: Location,
         status: Option<&MMStatus>,
         cache: &Cache,
     ) -> Result<()> {
-        if location == Location::Unknown {
+        if current_location == Location::Unknown {
             return Ok(());
-        } else if location == self.location {
+        } else if current_location == self.location {
             // Less than max seconds have elapsed.
             // No need to update MM status again
             if Utc::now().timestamp() - self.timestamp <= MAX_SECS_BEFORE_FORCE_UPDATE {
@@ -94,9 +100,9 @@ impl State {
                 return Ok(());
             }
         }
-        self.set_location(location, cache)?;
-        status.unwrap().send()?;
+        self.set_location(current_location, cache)?;
         // We update the status on MM
+        status.unwrap().send()?;
         Ok(())
     }
 }

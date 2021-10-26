@@ -1,3 +1,4 @@
+/// Module responsible for sending custom status change to mattermost.
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -52,12 +53,13 @@ impl MMStatus {
             token,
         }
     }
-    /// This function allows us to convert from the struct to a string of JSON which a web server
-    /// will accept
+    /// This function is essentially used for debugging as `reqwest` is able to do the
+    /// serialization by itself.
     pub fn to_json(self: &Self) -> Result<String, MMRSError> {
         json::to_string(&self).map_err(MMRSError::BadJSONData)
     }
 
+    /// Send the new custom status
     pub fn send(self: &Self) -> Result<reqwest::StatusCode, MMRSError> {
         debug!("Post status: {}", self.to_owned().to_json()?);
         let status_code: reqwest::StatusCode = reqwest::blocking::Client::new()

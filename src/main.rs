@@ -1,4 +1,4 @@
-#!doc[ = include_str!("README.md")]
+#![doc = include_str!("../README.md")]
 use ::lib::mattermost::MMStatus;
 use anyhow::{bail, Context, Result};
 use figment::{providers::Serialized, Figment};
@@ -8,8 +8,8 @@ use std::process::Command;
 use std::time;
 
 use ::lib::config::{Args, WifiStatusConfig};
-use ::lib::platforms::{WiFi, WifiInterface};
 use ::lib::state::{Cache, Location, State};
+use ::lib::wifiscan::{WiFi, WifiInterface};
 use std::path::PathBuf;
 use std::thread::sleep;
 //use tracing::subscriber:: set_global_default;

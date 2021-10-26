@@ -1,5 +1,5 @@
 use super::windows_parse::extract_netsh_ssid;
-use crate::platforms::{WiFi, WifiError, WifiInterface};
+use crate::wifiscan::{WiFi, WifiError, WifiInterface};
 use std::process::Command;
 
 impl WiFi {
