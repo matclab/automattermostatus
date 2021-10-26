@@ -1,23 +1,21 @@
 #!doc[ = include_str!("README.md")]
-use anyhow::{bail, Context, Result};
 use ::lib::mattermost::MMStatus;
+use anyhow::{bail, Context, Result};
+use figment::{providers::Serialized, Figment};
 use shell_words::split;
 use std::collections::HashMap;
 use std::process::Command;
 use std::time;
-use figment::{Figment, providers::{Serialized}};
 
-use ::lib::config::{Args,WifiStatusConfig};
+use ::lib::config::{Args, WifiStatusConfig};
 use ::lib::platforms::{WiFi, WifiInterface};
-use std::path:: PathBuf;
-use std::thread::sleep;
 use ::lib::state::{Cache, Location, State};
+use std::path::PathBuf;
+use std::thread::sleep;
 //use tracing::subscriber:: set_global_default;
 use tracing::{debug, info};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter}; // to access get_log_level
-use tracing_log::LogTracer;
-
 
 /// Return a `Cache` used to persist state.
 fn get_cache(dir: Option<PathBuf>) -> Result<Cache> {
@@ -33,6 +31,7 @@ fn get_cache(dir: Option<PathBuf>) -> Result<Cache> {
 }
 
 /// Setup logging to stdout
+/// (Tracing is a bit more involving to set up but will provide much more feature if needed)
 fn setup_tracing(args: &Args) -> Result<()> {
     let fmt_layer = fmt::layer().with_target(false);
     let filter_layer = EnvFilter::try_new(args.verbose.get_level_filter().to_string()).unwrap();
@@ -41,9 +40,7 @@ fn setup_tracing(args: &Args) -> Result<()> {
         .with(filter_layer)
         .with(fmt_layer)
         .init();
-    LogTracer::init()?;
     Ok(())
-
 }
 
 /// Update `args.mm_token` with the standard output of
@@ -90,11 +87,16 @@ fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
 #[paw::main]
 fn main(args: Args) -> Result<()> {
     setup_tracing(&args)?;
-    let cfg : Args = confy::load("automattermostatus")?;
+    // get config from OS specific file path
+    let cfg: Args = confy::load("automattermostatus")?;
+    // Merge config Default → Config File → command line args
     let args = Figment::from(Serialized::defaults(Args::default()))
-    .merge(Serialized::defaults(args))
-    .merge(Serialized::defaults(cfg)).extract()?;
-    debug!("Args : {:#?}", args);
+        .merge(Serialized::defaults(cfg))
+        .merge(Serialized::defaults(args))
+        .extract()?;
+    debug!("Merge config and parameters : {:#?}", args);
+
+    // Compute token if needed
     let args = update_token_with_command(args)?;
     let cache = get_cache(args.state_dir.to_owned())?;
     let status_dict = prepare_status(&args)?;
@@ -117,14 +119,18 @@ fn main(args: Args) -> Result<()> {
                 if ssids.iter().any(|x| x.contains(wifi_substring)) {
                     debug!("{} wifi detected", wifi_substring);
                     found_ssid = true;
-                    let loc  = l.clone();
-                    state.update_status(loc, &status_dict, &cache)?;
+                    let loc = l.clone();
+                    if let Some(mmstatus) = status_dict.get(&l) {
+                        state.update_status(loc, Some(&mmstatus), &cache)?;
+                    } else {
+                        bail!("Internal error {:?} not found in statusdict", &l);
+                    }
                 }
             }
         }
         if !found_ssid {
             debug!("Unknown wifi");
-            state.update_status(Location::Unknown, &status_dict, &cache)?;
+            state.update_status(Location::Unknown, None, &cache)?;
         }
         if let Some(0) = args.delay {
             break;

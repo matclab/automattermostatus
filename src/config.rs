@@ -1,16 +1,14 @@
-use directories_next::ProjectDirs;
 /// This module olds struct and helpers for parameters and configuration
 use ::structopt::clap::AppSettings;
-use anyhow::{bail, Result};
-use tracing::{debug};
-use serde::{Serialize,Deserialize,Serializer,Deserializer};
-use std::path::PathBuf;
 use anyhow;
+use anyhow::{bail, Result};
+use directories_next::ProjectDirs;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::path::PathBuf;
 use structopt;
+use tracing::debug;
 
-
-
-/// Object olding the configuration describing status that shall be send when 
+/// Object olding the configuration describing status that shall be send when
 /// a wifi with `wifi_string` is being seen.
 #[derive(Debug, PartialEq)]
 pub struct WifiStatusConfig {
@@ -85,7 +83,7 @@ pub struct QuietVerbose {
         short = "v",
         parse(from_occurrences),
         conflicts_with = "quietquiet",
-        global = true,
+        global = true
     )]
     verbosity_level: u8,
 
@@ -106,7 +104,10 @@ pub struct QuietVerbose {
 
 impl Default for QuietVerbose {
     fn default() -> Self {
-        QuietVerbose { verbosity_level: 1, quiet_level: 0 }
+        QuietVerbose {
+            verbosity_level: 1,
+            quiet_level: 0,
+        }
     }
 }
 
@@ -120,20 +121,37 @@ impl Serialize for QuietVerbose {
 }
 
 fn de_from_str<'de, D>(deserializer: D) -> Result<QuietVerbose, D::Error>
-    where D: Deserializer<'de>
+where
+    D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
     match s.to_ascii_lowercase().as_ref() {
-        "off" => Ok(QuietVerbose{ verbosity_level: 0, quiet_level: 2}),
-        "error" => Ok(QuietVerbose{ verbosity_level: 0, quiet_level: 1}),
-        "warn" => Ok(QuietVerbose{ verbosity_level: 0, quiet_level:0}),
-        "info" => Ok(QuietVerbose{ verbosity_level: 1, quiet_level:0}),
-        "debug" => Ok(QuietVerbose{ verbosity_level: 2, quiet_level:0}),
-        _ => Ok(QuietVerbose{ verbosity_level: 3, quiet_level:0}),
-
+        "off" => Ok(QuietVerbose {
+            verbosity_level: 0,
+            quiet_level: 2,
+        }),
+        "error" => Ok(QuietVerbose {
+            verbosity_level: 0,
+            quiet_level: 1,
+        }),
+        "warn" => Ok(QuietVerbose {
+            verbosity_level: 0,
+            quiet_level: 0,
+        }),
+        "info" => Ok(QuietVerbose {
+            verbosity_level: 1,
+            quiet_level: 0,
+        }),
+        "debug" => Ok(QuietVerbose {
+            verbosity_level: 2,
+            quiet_level: 0,
+        }),
+        _ => Ok(QuietVerbose {
+            verbosity_level: 3,
+            quiet_level: 0,
+        }),
     }
 }
-
 
 impl QuietVerbose {
     pub fn get_level_filter(&self) -> &str {
@@ -158,7 +176,7 @@ impl QuietVerbose {
     }
 }
 
-#[derive(structopt::StructOpt,Serialize,Deserialize,Debug)]
+#[derive(structopt::StructOpt, Serialize, Deserialize, Debug)]
 /// Automate mattermost status with the help of wifi network
 ///
 /// Use current available SSID of wifi networks to automate your mattermost status.
@@ -170,15 +188,11 @@ pub struct Args {
     #[structopt(short, long, env)]
     pub interface_name: Option<String>,
 
-
     /// Status configuration triplets (:: separated)
     ///
     /// Each triplet shall have the format:
     /// "wifi_substring::emoji_name::status_text"
-    #[structopt(
-        short,
-        long,
-    )]
+    #[structopt(short, long)]
     pub status: Vec<String>,
 
     /// mattermost URL
@@ -222,13 +236,21 @@ impl Default for Args {
             interface_name: Some("Wireless Network Connection".into()),
             #[cfg(target_os = "macos")]
             interface_name: Some("en0".into()),
-            status : [].to_vec(),
+            status: [].to_vec(),
             delay: Some(60),
-            state_dir: Some(ProjectDirs::from("net", "clabaut", "automattermostatus").unwrap().cache_dir().to_owned()), 
-            mm_token : None,
-            mm_token_cmd : None,
-            mm_url : Some("https://mattermost.com".into()),
-            verbose : QuietVerbose{ verbosity_level :1, quiet_level : 0},
+            state_dir: Some(
+                ProjectDirs::from("net", "clabaut", "automattermostatus")
+                    .unwrap()
+                    .cache_dir()
+                    .to_owned(),
+            ),
+            mm_token: None,
+            mm_token_cmd: None,
+            mm_url: Some("https://mattermost.com".into()),
+            verbose: QuietVerbose {
+                verbosity_level: 1,
+                quiet_level: 0,
+            },
         };
         debug!("Args::default : {:#?}", res);
         res

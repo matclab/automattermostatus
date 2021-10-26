@@ -1,6 +1,6 @@
 use quick_xml::events::Event;
 use quick_xml::Reader;
-use tracing::{error};
+use tracing::error;
 
 pub(crate) fn extract_airport_ssid(airport_output: &str) -> Vec<String> {
     let mut reader = Reader::from_str(airport_output);
@@ -17,8 +17,8 @@ pub(crate) fn extract_airport_ssid(airport_output: &str) -> Vec<String> {
                     b"key" => {
                         if let Ok(Event::Text(e)) = reader.read_event(&mut buf) {
                             if e.unescape_and_decode(&reader).unwrap() == "SSID_STR" {
-                                let _ =reader.read_event(&mut buf); // </key>
-                                let _ =reader.read_event(&mut buf); // </string>
+                                let _ = reader.read_event(&mut buf); // </key>
+                                let _ = reader.read_event(&mut buf); // </string>
                                 if let Ok(Event::Text(e)) = reader.read_event(&mut buf) {
                                     txt.push(e.unescape_and_decode(&reader).unwrap());
                                 } else {

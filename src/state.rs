@@ -1,6 +1,8 @@
-use anyhow::{bail, Context, Result};
-use chrono::{Utc};
-use std::{collections::HashMap, fs, io};
+/// Implement Wifi state
+///
+use anyhow::{Context, Result};
+use chrono::Utc;
+use std::{fs, io};
 use thiserror::Error;
 use tracing::{debug, info};
 
@@ -8,10 +10,13 @@ use crate::mattermost::MMStatus;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+/// If more than MAX_SECS_BEFORE_FORCE_UPDATE are elapsed, we forcibly update
+/// mattermost custom status to the expected value even if there was no change in visible
+/// wifi SSIDs.
 const MAX_SECS_BEFORE_FORCE_UPDATE: i64 = 60 * 60;
 
 pub struct Cache {
-    pub(crate) path: PathBuf,
+    path: PathBuf,
 }
 
 impl Cache {
@@ -20,12 +25,14 @@ impl Cache {
     }
 }
 
+/// Wifi locations
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Location {
     Known(String),
     Unknown,
 }
 
+/// State containing at least location info
 #[derive(Serialize, Deserialize, Debug)]
 pub struct State {
     location: Location,
@@ -39,6 +46,8 @@ pub enum CacheError {
 }
 
 impl State {
+    /// Build a state, either by reading current persisted state in `cache`
+    /// or by creating an empty default one.
     pub fn new(cache: &Cache) -> Result<Self> {
         let res: State;
         if let Ok(json) = &fs::read(&cache.path) {
@@ -56,6 +65,7 @@ impl State {
         Ok(res)
     }
 
+    /// Update state with location and ensure persisting of state on disk
     pub fn set_location(&mut self, location: Location, cache: &Cache) -> Result<()> {
         info!("Set location to `{:?}`", location);
         self.location = location;
@@ -68,13 +78,12 @@ impl State {
     pub fn update_status(
         &mut self,
         location: Location,
-        statusdict: &HashMap<Location, MMStatus>,
+        status: Option<&MMStatus>,
         cache: &Cache,
     ) -> Result<()> {
         if location == Location::Unknown {
             return Ok(());
-        }
-        else if location == self.location {
+        } else if location == self.location {
             // Less than max seconds have elapsed.
             // No need to update MM status again
             if Utc::now().timestamp() - self.timestamp <= MAX_SECS_BEFORE_FORCE_UPDATE {
@@ -85,13 +94,9 @@ impl State {
                 return Ok(());
             }
         }
+        self.set_location(location, cache)?;
+        status.unwrap().send()?;
         // We update the status on MM
-        if let Some(mmstatus) = statusdict.get(&location) {
-            self.set_location(location, cache)?;
-            mmstatus.send()?;
-        } else {
-            bail!("Internal error {:?} not found in statusdict", location);
-        }
         Ok(())
     }
 }
