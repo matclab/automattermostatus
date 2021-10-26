@@ -25,25 +25,6 @@ impl WifiInterface for WiFi {
         Ok(String::from_utf8_lossy(&output.stdout).contains("enabled"))
     }
 
-    /// Turn on the wireless network adapter.
-    fn turn_on(&self) -> Result<(), WifiError> {
-        Command::new("networksetup")
-            .args(&["-setairportpower", self.interface, "on"])
-            .output()
-            .map_err(|err| WifiError::IoError(err))?;
-
-        Ok(())
-    }
-
-    /// Turn off the wireless adapter.
-    fn turn_off(&self) -> Result<(), WifiError> {
-        Command::new("networksetup")
-            .args(&["-setairportpower", self.interface, "off"])
-            .output()
-            .map_err(|err| WifiError::IoError(err))?;
-
-        Ok(())
-    }
     fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {
         let output = Command::new(
             "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/A/Resources/airport ",

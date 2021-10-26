@@ -50,15 +50,6 @@ pub trait WifiInterface: fmt::Debug {
         unimplemented!();
     }
 
-    /// Turn on the wifi interface of host machine.
-    fn turn_on(&self) -> Result<(), WifiError> {
-        unimplemented!();
-    }
-
-    /// Turn off the wifi interface of host machine.
-    fn turn_off(&self) -> Result<(), WifiError> {
-        unimplemented!();
-    }
     fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {
         unimplemented!();
     }

@@ -29,37 +29,6 @@ impl WifiInterface for WiFi {
         Ok(!String::from_utf8_lossy(&output.stdout).contains("There is no wireless interface"))
     }
 
-    /// Turn on the wireless network adapter.
-    fn turn_on(&self) -> Result<(), WifiError> {
-        Command::new("netsh")
-            .args(&[
-                "interface",
-                "set",
-                "interface",
-                &format!("name= \"{}\"", self.interface),
-                "ENABLED",
-            ])
-            .output()
-            .map_err(|err| WifiError::IoError(err))?;
-
-        Ok(())
-    }
-
-    /// Turn off the wireless network adapter.
-    fn turn_off(&self) -> Result<(), WifiError> {
-        let _output = Command::new("netsh")
-            .args(&[
-                "interface",
-                "set",
-                "interface",
-                &format!("name= \"{}\"", self.interface),
-                "DISABLED",
-            ])
-            .output()
-            .map_err(|err| WifiError::IoError(err))?;
-
-        Ok(())
-    }
     fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {
         let output = Command::new("netsh")
             .args(&["wlan", "show", "networks"])

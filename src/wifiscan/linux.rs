@@ -26,25 +26,6 @@ impl WifiInterface for WiFi {
             .contains("enabled"))
     }
 
-    /// Turn on the wireless network adapter.
-    fn turn_on(&self) -> Result<(), WifiError> {
-        Command::new("nmcli")
-            .args(&["radio", "wifi", "on"])
-            .output()
-            .map_err(|err| WifiError::IoError(err))?;
-
-        Ok(())
-    }
-
-    /// Turn off the wireless network adapter.
-    fn turn_off(&self) -> Result<(), WifiError> {
-        Command::new("nmcli")
-            .args(&["radio", "wifi", "off"])
-            .output()
-            .map_err(|err| WifiError::IoError(err))?;
-
-        Ok(())
-    }
 
     fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {
         let output = Command::new("nmcli")
