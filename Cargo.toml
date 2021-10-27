@@ -38,9 +38,8 @@ directories-next = "2.0.0"
 mktemp = "0.4.1"
 #mockall = "0.10.2"
 
-[source.crates-io]
+#[source.crates-io]
 #replace-with = "vendored-sources"
-
-[source.vendored-sources]
+#[source.vendored-sources]
 #directory = "vendor"
 
