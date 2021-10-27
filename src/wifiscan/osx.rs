@@ -1,7 +1,5 @@
 use super::osx_parse::extract_airport_ssid;
-use crate::wifiscan::{Config, WifiError, WifiInterface};
-use quick_xml::events::Event;
-use quick_xml::Reader;
+use crate::wifiscan::{WiFi, WifiError, WifiInterface};
 use std::process::Command;
 
 impl WiFi {
