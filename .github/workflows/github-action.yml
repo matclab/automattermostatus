@@ -56,4 +56,22 @@ jobs:
       - name: Build | Compile
         run: cargo test
 
+  release-macos:
+    name: release-macos
+    runs-on: macos-latest
+    needs: [test]
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+      - name: Setup | Rust
+        uses: ATiltedTree/setup-rust@v1
+      - name: Build | Compile
+        run: cargo build --release
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
+          files: |
+            target/release/automattermostatus
+
 
