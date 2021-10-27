@@ -9,6 +9,12 @@
     - shared-macos-amd64
   image: macos-11-xcode-12
 
+cache:
+  key: $CI_COMMIT_REF_NAME-$CI_JOB_NAME
+  paths:
+    - target
+    - .cargo
+
 build-windows:
     stage: build
     extends: .shared_windows_runners
@@ -57,3 +63,25 @@ test:
     artifacts:
       paths:
         - target/release/automattermostatus.exe
+
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  rules:
+    - if: $CI_COMMIT_TAG                  # Run this job when a tag is created manually
+  script:
+    - echo 'release job'
+  release:
+    name: 'Release $CI_COMMIT_TAG'
+    description: 'Created using the release-cli $EXTRA_DESCRIPTION'  # $EXTRA_DESCRIPTION must be defined
+    tag_name: '$CI_COMMIT_TAG'                                       # elsewhere in the pipeline.
+    ref: '$CI_COMMIT_TAG'
+#    assets: # Optional, multiple asset links
+#      links:
+#        - name: 'asset1'
+#          url: 'https://example.com/assets/1'
+#        - name: 'asset2'
+#          url: 'https://example.com/assets/2'
+#          filepath: '/pretty/url/1' # optional
+#          link_type: 'other' # optional
+
