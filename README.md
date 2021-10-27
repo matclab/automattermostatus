@@ -66,7 +66,7 @@ line.
 The config file is created if it does not exist.  It is created or read in the following places depending on your OS:
 -    the [XDG user directory](https://www.freedesktop.org/wiki/Software/xdg-user-dirs/) specifications on Linux (usually `~/.config/automattermostatus/automattermostatus.toml`),
 -    the [Known Folder system](https://msdn.microsoft.com/en-us/library/windows/desktop/dd378457.aspx) on Windows (usually `{FOLDERID_RoamingAppData}/automattermostatus/config`),
--    the [Standard Directories](https://developer.apple.com/library/content/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html#//apple_ref/doc/uid/TP40010672-CH2-SW6) on macOS (usually `$HOME/Library/Application Support/<project_path>`).
+-    the [Standard Directories](https://developer.apple.com/library/content/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html#//apple_ref/doc/uid/TP40010672-CH2-SW6) on macOS (usually `$HOME/Library/Application Support/automattermost`).
 
 A sample config file is:
 
@@ -78,6 +78,7 @@ mm_url = 'https://mattermost.example.com'
 verbose = 'Info'
 mm_token_cmd = "secret-tool lookup name automattermostatus"
 ```
+
 ### Mattermost private token
 Your private token is availabe under `Account Parameters > Security > Personal
 Access Token`. You should avoid to use `mm_token` parameter as it may leak
