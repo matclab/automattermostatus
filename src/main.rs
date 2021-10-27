@@ -114,13 +114,15 @@ fn main(args: Args) -> Result<()> {
         let ssids = wifi.visible_ssid()?;
         debug!("Visible SSIDs {:#?}", ssids);
         let mut found_ssid = false;
+        // Search for known wifi in visible ssids
         for l in status_dict.keys() {
             if let Location::Known(wifi_substring) = l {
                 if ssids.iter().any(|x| x.contains(wifi_substring)) {
-                    debug!("{} wifi detected", wifi_substring);
+                    debug!("known wifi '{}' detected", wifi_substring);
                     found_ssid = true;
                     if let Some(mmstatus) = status_dict.get(l) {
                         state.update_status(l.clone(), Some(mmstatus), &cache)?;
+                        break;
                     } else {
                         bail!("Internal error {:?} not found in statusdict", &l);
                     }
