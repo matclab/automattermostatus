@@ -1,3 +1,5 @@
+image: rust
+
 .shared_windows_runners:
   tags:
   - shared-windows
@@ -15,41 +17,54 @@ cache:
     - target
     - .cargo
 
+style:
+  script:
+    - rustup component add clippy rustfmt
+    - rustc --version
+    - cargo version
+    - cargo fmt -- --check
+    - cargo clippy
+
 build-windows:
-    stage: build
-    extends: .shared_windows_runners
-    before_script:
-      - choco feature enable -n=allowGlobalConfirmation
-      - choco install rust
-    script:
-        - cargo build --release 
-    artifacts:
-      paths:
-        - target/release/automattermostatus.exe
+  stage: build
+  extends: .shared_windows_runners
+  before_script:
+    - choco feature enable -n=allowGlobalConfirmation
+    - choco install rust
+  script:
+    - cargo build --release 
+    - cargo test 
+  artifacts:
+    paths:
+      - target/release/automattermostatus.exe
+    expire_in: 7 day
 
-test-windows:
-    stage: test
-    extends: .shared_windows_runners
-    before_script:
-      - choco feature enable -n=allowGlobalConfirmation
-      - choco  install rust
-    script:
-        - cargo test 
 
-build:
-    stage: build
-    image: rust
-    script:
-        - cargo build --release 
-    artifacts:
-      paths:
-        - target/release/automattermostatus
+build-linux:
+  stage: build
+  script:
+    - cargo build --release 
+    - cargo test 
+  artifacts:
+    paths:
+      - target/release/automattermostatus
+    expire_in: 7 day
 
-test:
-    stage: test
-    image: rust
-    script:
-        - cargo test 
+build-linux-beta:
+  stage: build
+  before_script:
+    - echo nightly > rust-toolchain
+  script:
+    - cargo build --release 
+    - cargo test 
+
+build-linux-nightly:
+  stage: build
+  before_script:
+    - echo nightly > rust-toolchain
+  script:
+    - cargo build --release 
+    - cargo test 
 
 # Not enabled for now
 .build-mac:
@@ -60,6 +75,7 @@ test:
       - rustup install stable
     script:
         - cargo build --release 
+        - cargo test
     artifacts:
       paths:
         - target/release/automattermostatus.exe
