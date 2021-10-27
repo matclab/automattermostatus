@@ -20,8 +20,7 @@ impl WifiInterface for WiFi {
             .output()
             .map_err(WifiError::IoError)?;
 
-        Ok(String::from_utf8_lossy(&output.stdout)
-            .contains("enabled"))
+        Ok(String::from_utf8_lossy(&output.stdout).contains("enabled"))
     }
 
     fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {
