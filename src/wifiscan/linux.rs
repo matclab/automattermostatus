@@ -18,21 +18,18 @@ impl WifiInterface for WiFi {
         let output = Command::new("nmcli")
             .args(&["radio", "wifi"])
             .output()
-            .map_err(|err| WifiError::IoError(err))?;
+            .map_err(WifiError::IoError)?;
 
         Ok(String::from_utf8_lossy(&output.stdout)
-            .replace(" ", "")
-            .replace("\n", "")
             .contains("enabled"))
     }
-
 
     fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {
         let output = Command::new("nmcli")
             .args(&["-t", "-m", "tabular", "-f", "SSID", "device", "wifi"])
             .output()
-            .map_err(|err| WifiError::IoError(err))?;
+            .map_err(WifiError::IoError)?;
         let stdout = String::from_utf8_lossy(&output.stdout).to_owned();
-        Ok(stdout.split("\n").map(str::to_string).collect())
+        Ok(stdout.split('\n').map(str::to_string).collect())
     }
 }

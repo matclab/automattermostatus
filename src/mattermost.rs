@@ -55,12 +55,12 @@ impl MMStatus {
     }
     /// This function is essentially used for debugging as `reqwest` is able to do the
     /// serialization by itself.
-    pub fn to_json(self: &Self) -> Result<String, MMRSError> {
+    pub fn to_json(&self) -> Result<String, MMRSError> {
         json::to_string(&self).map_err(MMRSError::BadJSONData)
     }
 
     /// Send the new custom status
-    pub fn send(self: &Self) -> Result<reqwest::StatusCode, MMRSError> {
+    pub fn send(&self) -> Result<reqwest::StatusCode, MMRSError> {
         debug!("Post status: {}", self.to_owned().to_json()?);
         let status_code: reqwest::StatusCode = reqwest::blocking::Client::new()
             .put(&self.uri)

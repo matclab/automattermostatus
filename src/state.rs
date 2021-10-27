@@ -71,7 +71,7 @@ impl State {
         self.location = location;
         self.timestamp = Utc::now().timestamp();
         fs::write(&cache.path, serde_json::to_string(&self).unwrap())
-            .map_err(|err| CacheError::IoError(err))?;
+            .map_err(CacheError::IoError)?;
         Ok(())
     }
 

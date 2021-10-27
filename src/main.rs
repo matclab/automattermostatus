@@ -47,7 +47,7 @@ fn setup_tracing(args: &Args) -> Result<()> {
 /// `args.mm_token_cmd` if defined.
 fn update_token_with_command(mut args: Args) -> Result<Args> {
     if let Some(command) = &args.mm_token_cmd {
-        let params = split(&command)?;
+        let params = split(command)?;
         debug!("Running command {}", command);
         let output = Command::new(&params[0])
             .args(&params[1..])
@@ -119,9 +119,8 @@ fn main(args: Args) -> Result<()> {
                 if ssids.iter().any(|x| x.contains(wifi_substring)) {
                     debug!("{} wifi detected", wifi_substring);
                     found_ssid = true;
-                    let loc = l.clone();
-                    if let Some(mmstatus) = status_dict.get(&l) {
-                        state.update_status(loc, Some(&mmstatus), &cache)?;
+                    if let Some(mmstatus) = status_dict.get(l) {
+                        state.update_status(l.clone(), Some(mmstatus), &cache)?;
                     } else {
                         bail!("Internal error {:?} not found in statusdict", &l);
                     }
