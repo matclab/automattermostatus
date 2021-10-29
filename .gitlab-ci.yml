@@ -6,7 +6,6 @@ variables:
 
 
 stages:
-  - style
   - build
   - test
   - release
@@ -29,7 +28,7 @@ cache:
     - .cargo
 
 style:
-  stage: style
+  stage: build
   script:
     - rustup component add clippy rustfmt
     - rustc --version
@@ -62,7 +61,7 @@ build-linux:
     expire_in: 7 day
 
 test-linux:
-  stage: test
+  stage: build
   before_script:
     - cargo install cargo2junit
   script:
@@ -76,7 +75,7 @@ test-linux:
       junit: tests.xml
 
 test-linux-beta:
-  stage: test
+  stage: build
   before_script:
     - echo beta > rust-toolchain
     - cargo install cargo2junit
@@ -91,7 +90,7 @@ test-linux-beta:
       junit: tests.xml
 
 test-linux-nightly:
-  stage: test
+  stage: build
   before_script:
     - echo nightly > rust-toolchain
     - cargo install cargo2junit
