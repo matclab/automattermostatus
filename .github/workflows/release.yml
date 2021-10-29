@@ -1,7 +1,10 @@
-name: Rust
+name: Rust MacOS Release
 
 on:
   push:
+    tags:
+      - 'v*'
+  create:
     tags:
       - 'v*'
 
