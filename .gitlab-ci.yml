@@ -100,12 +100,14 @@ upload:
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+.*$/
   script:
+    - env
+    - echo "$PACKAGE_REGISTRY_URL"
     - cp target/release/automattermostatus ${LINUX_AMD64_BINARY}
     - cp target/release/automattermostatus.exe ${WINDOWS_AMD64_BINARY}
     - |
-      curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ${WINDOWS_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/windows/
+      curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ${WINDOWS_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/windows/${WINDOWS_AMD64_BINARY}
     - |
-      curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ${LINUX_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/linux/
+      curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ${LINUX_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/linux/${LINUX_AMD64_BINARY}
 
 
 release:
@@ -115,8 +117,7 @@ release:
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+.*$/
   script:
-    - sed -ne '/^# '${CI_COMMIT_TAG}' *$/,/^# v[0-9]\+\.[0-9]\+\.[0-9]/p' CHANGELOG.md | head -n-2 > description.txt
-    - echo 'release job'
+    - sed -ne '/^# '${CI_COMMIT_TAG}' .*$/,/^# v[0-9]\+\.[0-9]\+\.[0-9]/p' CHANGELOG.md | head -n-2 > description.txt
   release:
     name: 'Release $CI_COMMIT_TAG'
     description: './description.txt'
@@ -124,10 +125,10 @@ release:
     ref: '$CI_COMMIT_TAG'
     assets: # Optional, multiple asset links
       links:
-        - name: ${LINUX_AMD64_BINARY}
+        - name: "Linux build : ${LINUX_AMD64_BINARY}"
           url: ${PACKAGE_REGISTRY_URL}/linux/${LINUX_AMD64_BINARY}
-        - name: ${WINDOWS_AMD64_BINARY}
+        - name: "Windows build : ${WINDOWS_AMD64_BINARY}"
           url: ${PACKAGE_REGISTRY_URL}/windows${WINDOWS_AMD64_BINARY}
-        - name: 'latest macos build'
-          url: 'https://github.com/matclab/automattermostatus/releases/download/latestmacos/automattermostatus'
+        - name: 'MacOS build'
+          url: "https://github.com/matclab/automattermostatus/releases/download/${CI_COMMIT_TAG}/automattermostatus"
 
