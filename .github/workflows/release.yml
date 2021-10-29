@@ -30,5 +30,9 @@ jobs:
             #automatic_release_tag: latest-macos
           files: |
             target/release/automattermostatus
+      - uses: wei/curl@v1
+        with:
+          args: --upload-file target/release/automattermostatus 
+
 
 
