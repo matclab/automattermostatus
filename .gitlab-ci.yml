@@ -55,27 +55,56 @@ build-linux:
   stage: build
   script:
     - cargo build --release 
-    - cargo test 
   artifacts:
     paths:
       - target/release/automattermostatus
     expire_in: 7 day
 
+test-linux:
+  stage: test
+  before_script:
+    - cargo install cargo2junit
+  script:
+    - cargo build --release 
+    - cargo test -- -Z unstable-options --format json --report-time | cargo2junit > tests.xml
+  artifacts:
+    paths:
+      - tests.xml
+    when: always
+    reports:
+      junit: tests.xml
+
 build-linux-beta:
   stage: build
   before_script:
-    - echo nightly > rust-toolchain
+    - echo beta > rust-toolchain
+    - cargo install cargo2junit
   script:
     - cargo build --release 
-    - cargo test 
+    - cargo test -- -Z unstable-options --format json --report-time | cargo2junit > tests.xml
+  artifacts:
+    paths:
+      - tests.xml
+    expire_in: 7 day
+    when: always
+    reports:
+      junit: tests.xml
 
 build-linux-nightly:
   stage: build
   before_script:
     - echo nightly > rust-toolchain
+    - cargo install cargo2junit
   script:
     - cargo build --release 
-    - cargo test 
+    - cargo test -- -Z unstable-options --format json --report-time | cargo2junit > tests.xml
+  artifacts:
+    paths:
+      - tests.xml
+    expire_in: 7 day
+    when: always
+    reports:
+      junit: tests.xml
 
 # Not enabled for now
 .build-mac:
@@ -105,9 +134,9 @@ upload:
     - cp target/release/automattermostatus ${LINUX_AMD64_BINARY}
     - cp target/release/automattermostatus.exe ${WINDOWS_AMD64_BINARY}
     - |
-      curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ${WINDOWS_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/windows/${WINDOWS_AMD64_BINARY}
+      curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ${WINDOWS_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/${WINDOWS_AMD64_BINARY}
     - |
-      curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ${LINUX_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/linux/${LINUX_AMD64_BINARY}
+      curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ${LINUX_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/${LINUX_AMD64_BINARY}
 
 
 release:
