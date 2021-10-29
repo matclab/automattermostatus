@@ -8,6 +8,7 @@ variables:
 stages:
   - style
   - build
+  - test
   - release
 
 .shared_windows_runners:
@@ -74,13 +75,12 @@ test-linux:
     reports:
       junit: tests.xml
 
-build-linux-beta:
-  stage: build
+test-linux-beta:
+  stage: test
   before_script:
     - echo beta > rust-toolchain
     - cargo install cargo2junit
   script:
-    - cargo build --release 
     - cargo test -- -Z unstable-options --format json --report-time | cargo2junit > tests.xml
   artifacts:
     paths:
@@ -90,13 +90,12 @@ build-linux-beta:
     reports:
       junit: tests.xml
 
-build-linux-nightly:
-  stage: build
+test-linux-nightly:
+  stage: test
   before_script:
     - echo nightly > rust-toolchain
     - cargo install cargo2junit
   script:
-    - cargo build --release 
     - cargo test -- -Z unstable-options --format json --report-time | cargo2junit > tests.xml
   artifacts:
     paths:
