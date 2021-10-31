@@ -4,7 +4,6 @@ name = "automattermostatus"
 version = "0.1.2"
 edition = "2018"
 
-
 # We use a separate lib in order to be able to run tests and doctests
 [lib]
 name = "lib"
@@ -13,6 +12,11 @@ path = "src/lib.rs"
 [[bin]]
 name = "automattermostatus"
 path= "src/main.rs"
+
+[profile.dev]
+# Disabling debug info speeds up builds a bunch,
+# and we don't rely on it for debugging that much.
+debug = 0
 
 [dependencies]
 anyhow = "1.0.44"
