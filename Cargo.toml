@@ -26,8 +26,7 @@ thiserror = "1.0.30"
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0.68"
 tracing = { version = "0.1.29" }
-tracing-subscriber = { version = "0.2.25", features = ["registry", "env-filter"] }
-structopt-flags = "0.3.6"
+tracing-subscriber = { version = "0.2.25", features = ["registry"] }
 reqwest = { version = "0.11.6", features = ["blocking", "json"] }
 chrono = {version="0.4.19", features=["serde"]}
 shell-words = "1.0.0"
