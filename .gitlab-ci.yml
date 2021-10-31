@@ -131,8 +131,8 @@ upload:
     - echo "$PACKAGE_REGISTRY_URL"
     - cp target/release/automattermostatus ${LINUX_AMD64_BINARY}
     - cp target/release/automattermostatus.exe ${WINDOWS_AMD64_BINARY}
-    - 'curl -v --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file ${WINDOWS_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/${WINDOWS_AMD64_BINARY}'
-    - 'curl -v --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file ${LINUX_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/${LINUX_AMD64_BINARY}'
+    - 'curl --fail-with-body --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file ${WINDOWS_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/${WINDOWS_AMD64_BINARY}'
+    - 'curl --fail-with-body --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file ${LINUX_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/${LINUX_AMD64_BINARY}'
 
 
 release:
