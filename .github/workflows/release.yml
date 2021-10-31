@@ -30,9 +30,8 @@ jobs:
             #automatic_release_tag: latest-macos
           files: |
             target/release/automattermostatus
-      - uses: wei/curl@v1
-        with:
-          args: --upload-file target/release/automattermostatus 
-
+#      - name: upload to gitlab
+#        run: curl --header "Private-Token: ${{ secrets.GITLAB_TOKEN }}" --upload-file target/release/automattermostatus-macos-amd64 
+#
 
 
