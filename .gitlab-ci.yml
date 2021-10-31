@@ -37,14 +37,17 @@ style:
     - cargo clippy
 
 build-windows:
+  variable:
+    RUSTFLAGS: "-D warnings" # Disallow warnings
   stage: build
   extends: .shared_windows_runners
   before_script:
     - choco feature enable -n=allowGlobalConfirmation
     - choco install rust
+    - cargo install cargo2junit
   script:
     - cargo build --release 
-    - cargo test 
+    - cargo test -- -Z unstable-options --format json --report-time | cargo2junit > tests.xml
   artifacts:
     paths:
       - target/release/automattermostatus.exe
@@ -53,6 +56,8 @@ build-windows:
 
 build-linux:
   stage: build
+  variable:
+    RUSTFLAGS: "-D warnings" # Disallow warnings
   script:
     - cargo build --release 
   artifacts:
@@ -65,7 +70,6 @@ test-linux:
   before_script:
     - cargo install cargo2junit
   script:
-    - cargo build --release 
     - cargo test -- -Z unstable-options --format json --report-time | cargo2junit > tests.xml
   artifacts:
     paths:
