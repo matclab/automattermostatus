@@ -30,8 +30,10 @@ jobs:
             #automatic_release_tag: latest-macos
           files: |
             target/release/automattermostatus
-#      - name: upload to gitlab
-#        run: curl --header "Private-Token: ${{ secrets.GITLAB_TOKEN }}" --upload-file target/release/automattermostatus-macos-amd64 
-#
+      - name: upload to gitlab
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+        run: 'curl --header "Private-Token: $GITLAB_TOKEN" --upload-file target/release/automattermostatus-macos-amd64 https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/v0.1.2/'
+
 
 
