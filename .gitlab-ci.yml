@@ -80,9 +80,9 @@ test-linux:
       junit: tests.xml
 
 test-linux-beta:
+  image: instrumentisto/rust:beta
   stage: build
   before_script:
-    - echo beta > rust-toolchain
     - cargo install cargo2junit
   script:
     - cargo test -- -Z unstable-options --format json --report-time | cargo2junit > tests.xml
@@ -94,13 +94,12 @@ test-linux-beta:
     reports:
       junit: tests.xml
 
-test-linux-nightly:
+.test-linux-nightly:
   stage: build
   before_script:
-    - echo nightly > rust-toolchain
     - cargo install cargo2junit
   script:
-    - cargo test -- -Z unstable-options --format json --report-time | cargo2junit > tests.xml
+    - cargo +nightly test -- -Z unstable-options --format json --report-time | cargo2junit > tests.xml
   artifacts:
     paths:
       - tests.xml
