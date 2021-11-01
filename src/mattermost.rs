@@ -73,3 +73,36 @@ impl MMStatus {
         Ok(status_code)
     }
 }
+
+#[cfg(test)]
+mod should {
+    use super::*;
+    use httpmock::prelude::*;
+    #[test]
+    fn mmstatus_send_required_json() -> Result<()> {
+        // Start a lightweight mock server.
+        let server = MockServer::start();
+        let mmstatus = MMStatus::new("text".to_string(), "emoji".to_string() ,server.url(""),"token".to_string());
+
+        // Create a mock on the server.
+        let server_mock = server.mock(|expect, resp_with| {
+            expect.method(PUT)
+                .header("Authorization", "Bearer token")
+                .path("/api/v4/users/me/status/custom")
+                .json_body(serde_json::json!({"emoji":"emoji","text":"text"}
+));
+            resp_with.status(200)
+                .header("content-type", "text/html")
+                .body("ok");
+        });
+
+        // Send an HTTP request to the mock server. This simulates your code.
+       let status = mmstatus.send()?;
+
+        // Ensure the specified mock was called exactly one time (or fail with a detailed error description).
+        server_mock.assert();
+        // Ensure the mock server did respond as specified.
+        assert_eq!(status, 200);
+        Ok(())
+    }
+}
