@@ -33,6 +33,8 @@ jobs:
         with:
           rust-version: stable
       - name: Build | Check
+        env:
+          RUSTFLAGS: "-D warnings" # Disallow warnings
         run: cargo check
   test:
     name: Test
