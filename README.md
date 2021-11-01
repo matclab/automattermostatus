@@ -6,7 +6,7 @@ Development site is hosted on [gitlab](https://gitlab.com/matclab/automattermost
 Here after is the command line help.
 <!-- `$ target/debug/automattermostatus --help` as text -->
 ```text
-automattermostatus 0.1.0
+automattermostatus 0.1.3
 Automate mattermost status with the help of wifi network
 
 Use current visible wifi SSID to automate your mattermost status. This program is meant to either be running in
