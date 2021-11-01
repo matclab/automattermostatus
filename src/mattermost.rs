@@ -12,7 +12,7 @@ pub enum MMRSError {
     #[error("Bad json data")]
     BadJSONData(#[from] serde_json::error::Error),
     #[error("HTTP request error")]
-    HTTPRequestError(#[from] reqwest::Error),
+    HTTPRequestError(#[from] ureq::Error),
 }
 
 /// Custom struct to serialize the HTTP POST data into a json objecting using serde_json
@@ -53,24 +53,19 @@ impl MMStatus {
             token,
         }
     }
-    /// This function is essentially used for debugging as `reqwest` is able to do the
-    /// serialization by itself.
+    /// This function is essentially used for debugging or testing
     pub fn to_json(&self) -> Result<String, MMRSError> {
         json::to_string(&self).map_err(MMRSError::BadJSONData)
     }
 
     /// Send the new custom status
-    pub fn send(&self) -> Result<reqwest::StatusCode, MMRSError> {
+    pub fn send(&self) -> Result<u16, MMRSError> {
         debug!("Post status: {}", self.to_owned().to_json()?);
-        let status_code: reqwest::StatusCode = reqwest::blocking::Client::new()
-            .put(&self.uri)
-            .header("Authorization", "Bearer ".to_owned() + &self.token)
-            .json(&self)
-            .send()
-            .map_err(MMRSError::HTTPRequestError)?
-            .status();
-
-        Ok(status_code)
+        let response = ureq::put(&self.uri)
+            .set("Authorization", &("Bearer ".to_owned() + &self.token))
+            .send_json(serde_json::to_value(&self)?)
+            .map_err(MMRSError::HTTPRequestError)?;
+        Ok(response.status())
     }
 }
 
@@ -79,7 +74,7 @@ mod should {
     use super::*;
     use httpmock::prelude::*;
     #[test]
-    fn mmstatus_send_required_json() -> Result<()> {
+    fn send_required_json_for_mmstatus() -> Result<()> {
         // Start a lightweight mock server.
         let server = MockServer::start();
         let mmstatus = MMStatus::new("text".to_string(), "emoji".to_string() ,server.url(""),"token".to_string());
