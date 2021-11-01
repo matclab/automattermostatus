@@ -37,7 +37,7 @@ style:
     - cargo clippy
 
 build-windows:
-  variable:
+  variables:
     RUSTFLAGS: "-D warnings" # Disallow warnings
   stage: build
   extends: .shared_windows_runners
@@ -56,7 +56,7 @@ build-windows:
 
 build-linux:
   stage: build
-  variable:
+  variables:
     RUSTFLAGS: "-D warnings" # Disallow warnings
   script:
     - cargo build --release 
