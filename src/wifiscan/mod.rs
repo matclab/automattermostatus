@@ -19,14 +19,16 @@ use thiserror::Error;
 
 #[derive(Debug)]
 pub struct Connection {
-    pub(crate) ssid: String,
+    pub ssid: String,
 }
 
 /// Wireless network interface for linux operating system.
 #[derive(Debug)]
 pub struct WiFi {
-    pub(crate) connection: Option<Connection>,
-    pub(crate) interface: String,
+    #[allow(dead_code)]
+    pub connection: Option<Connection>,
+    #[allow(dead_code)]
+    pub interface: String,
 }
 
 #[derive(Debug, Error)]
