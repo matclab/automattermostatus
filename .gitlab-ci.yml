@@ -41,13 +41,14 @@ build-windows:
     RUSTFLAGS: "-D warnings" # Disallow warnings
   stage: build
   extends: .shared_windows_runners
+  rules:  # We don't build for daily CI as it is too long and is cargo checked on github actions anyway
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+.*$/
   before_script:
     - choco feature enable -n=allowGlobalConfirmation
     - choco install rust
-    - cargo install cargo2junit
   script:
+    - cargo test
     - cargo build --release 
-    - cargo test -- -Z unstable-options --format json --report-time | cargo2junit > tests.xml
   artifacts:
     paths:
       - target/release/automattermostatus.exe
