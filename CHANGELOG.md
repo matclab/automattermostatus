@@ -1,5 +1,8 @@
 # Next release
 
+# v0.1.3 : Still working release process
+No functional change.
+
 # v0.1.2 : Working on CI and release process
 No functional change.
 
