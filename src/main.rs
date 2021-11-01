@@ -15,7 +15,9 @@ use std::thread::sleep;
 //use tracing::subscriber:: set_global_default;
 use tracing::{debug, info};
 use tracing_subscriber::prelude::*;
-use tracing_subscriber::{fmt, layer::SubscriberExt//, EnvFilter
+use tracing_subscriber::{
+    fmt,
+    layer::SubscriberExt, //, EnvFilter
 }; // to access get_log_level
 
 /// Return a `Cache` used to persist state.

@@ -77,22 +77,29 @@ mod should {
     fn send_required_json_for_mmstatus() -> Result<()> {
         // Start a lightweight mock server.
         let server = MockServer::start();
-        let mmstatus = MMStatus::new("text".to_string(), "emoji".to_string() ,server.url(""),"token".to_string());
+        let mmstatus = MMStatus::new(
+            "text".to_string(),
+            "emoji".to_string(),
+            server.url(""),
+            "token".to_string(),
+        );
 
         // Create a mock on the server.
         let server_mock = server.mock(|expect, resp_with| {
-            expect.method(PUT)
+            expect
+                .method(PUT)
                 .header("Authorization", "Bearer token")
                 .path("/api/v4/users/me/status/custom")
                 .json_body(serde_json::json!({"emoji":"emoji","text":"text"}
-));
-            resp_with.status(200)
+                ));
+            resp_with
+                .status(200)
                 .header("content-type", "text/html")
                 .body("ok");
         });
 
         // Send an HTTP request to the mock server. This simulates your code.
-       let status = mmstatus.send()?;
+        let status = mmstatus.send()?;
 
         // Ensure the specified mock was called exactly one time (or fail with a detailed error description).
         server_mock.assert();
