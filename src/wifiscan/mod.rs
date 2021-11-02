@@ -1,3 +1,4 @@
+//! Implement wifi SSID scan for linux, windows and mac os.
 // Mostly courtesy of https://github.com/tnkemdilim/wifi-rs
 
 #[cfg(target_os = "linux")]
@@ -17,21 +18,16 @@ mod windows_parse;
 use std::{fmt, io};
 use thiserror::Error;
 
-#[derive(Debug)]
-pub struct Connection {
-    pub ssid: String,
-}
-
-/// Wireless network interface for linux operating system.
+/// Wireless network interface.
 #[derive(Debug)]
 pub struct WiFi {
     #[allow(dead_code)]
-    pub connection: Option<Connection>,
-    #[allow(dead_code)]
+    /// wifi interface name
     pub interface: String,
 }
 
 #[derive(Debug, Error)]
+/// Error specific to `Wifi` struct.
 pub enum WifiError {
     /// The specified wifi  is currently disabled. Try switching it on.
     #[error("Wifi is currently disabled")]
@@ -40,6 +36,7 @@ pub enum WifiError {
     #[cfg(target_os = "windows")]
     #[error("Wifi interface failed to switch on")]
     InterfaceFailedToOn,
+    #[allow(missing_docs)]
     #[error("Wifi IO Error")]
     IoError(#[from] io::Error),
 }
@@ -52,6 +49,7 @@ pub trait WifiInterface: fmt::Debug {
         unimplemented!();
     }
 
+    /// Return visible SSIDs
     fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {
         unimplemented!();
     }

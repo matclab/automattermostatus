@@ -1,4 +1,4 @@
-/// Module responsible for sending custom status change to mattermost.
+//! Module responsible for sending custom status change to mattermost.
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -7,8 +7,10 @@ use std::fmt;
 use thiserror::Error;
 use tracing::debug;
 
+/// Implement errors specific to `MMStatus`
+#[allow(missing_docs)]
 #[derive(Debug, Error)]
-pub enum MMRSError {
+pub enum MMSError {
     #[error("Bad json data")]
     BadJSONData(#[from] serde_json::error::Error),
     #[error("HTTP request error")]
@@ -19,14 +21,20 @@ pub enum MMRSError {
 /// For a description of these fields see the [MatterMost OpenApi sources](https://github.com/mattermost/mattermost-api-reference/blob/master/v4/source/status.yaml)
 #[derive(Serialize, Deserialize)]
 pub struct MMStatus {
+    /// custom status text description
     pub text: String,
+    /// custom status emoji name
     pub emoji: String,
+    /// custom status duration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<String>,
+    /// custom status expiration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expires_at: Option<DateTime<Utc>>,
+    /// base URL of the mattermost server like https://mattermost.example.com
     #[serde(skip_serializing)]
-    uri: String,
+    base_uri: String,
+    /// private access token for current user on the `base_uri` mattermost instance
     #[serde(skip_serializing)]
     token: String,
 }
@@ -42,29 +50,31 @@ impl fmt::Display for MMStatus {
 }
 
 impl MMStatus {
-    pub fn new(text: String, emoji: String, mm_api_uri: String, token: String) -> MMStatus {
-        let uri = mm_api_uri + "/api/v4/users/me/status/custom";
+    /// Create a `MMStatus` ready to be sent to the `mm_base_uri` mattermost instance.
+    /// Authentication is done with the private access `token`.
+    pub fn new(text: String, emoji: String, mm_base_uri: String, token: String) -> MMStatus {
+        let uri = mm_base_uri + "/api/v4/users/me/status/custom";
         MMStatus {
             text,
             emoji,
             duration: None,
             expires_at: None,
-            uri,
+            base_uri: uri,
             token,
         }
     }
     /// This function is essentially used for debugging or testing
-    pub fn to_json(&self) -> Result<String, MMRSError> {
-        json::to_string(&self).map_err(MMRSError::BadJSONData)
+    pub fn to_json(&self) -> Result<String, MMSError> {
+        json::to_string(&self).map_err(MMSError::BadJSONData)
     }
 
     /// Send the new custom status
-    pub fn send(&self) -> Result<u16, MMRSError> {
+    pub fn send(&self) -> Result<u16, MMSError> {
         debug!("Post status: {}", self.to_owned().to_json()?);
-        let response = ureq::put(&self.uri)
+        let response = ureq::put(&self.base_uri)
             .set("Authorization", &("Bearer ".to_owned() + &self.token))
             .send_json(serde_json::to_value(&self)?)
-            .map_err(MMRSError::HTTPRequestError)?;
+            .map_err(MMSError::HTTPRequestError)?;
         Ok(response.status())
     }
 }

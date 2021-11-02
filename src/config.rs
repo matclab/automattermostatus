@@ -1,5 +1,5 @@
-/// This module olds struct and helpers for parameters and configuration
-///
+//! This module holds struct and helpers for parameters and configuration
+//!
 use ::structopt::clap::AppSettings;
 use anyhow;
 use anyhow::{bail, Result};
@@ -12,8 +12,12 @@ use tracing::debug;
 /// Status that shall be send when a wifi with `wifi_string` is being seen.
 #[derive(Debug, PartialEq)]
 pub struct WifiStatusConfig {
+    /// wifi SSID substring associated to this object custom status
     pub wifi_string: String,
+    /// string description of the emoji that will be set as a custom status (like `home` for
+    /// `:home:` mattermost emoji.
     pub emoji: String,
+    /// custom status text description
     pub text: String,
 }
 
@@ -46,6 +50,7 @@ impl std::str::FromStr for WifiStatusConfig {
 }
 
 // Courtesy of structopt_flags crate
+/// `StructOpt` implementing the verbosity parameter
 #[derive(structopt::StructOpt, Debug, Clone)]
 pub struct QuietVerbose {
     /// Increase the output's verbosity level
@@ -128,6 +133,7 @@ where
 }
 
 impl QuietVerbose {
+    /// Returns the string associated to the current verbose level
     pub fn get_level_filter(&self) -> &str {
         let quiet: i8 = if self.quiet_level > 1 {
             2
@@ -201,6 +207,7 @@ pub struct Args {
     #[structopt(long, env)]
     pub delay: Option<u8>,
 
+    #[allow(missing_docs)]
     #[structopt(flatten)]
     #[serde(deserialize_with = "de_from_str")]
     pub verbose: QuietVerbose,

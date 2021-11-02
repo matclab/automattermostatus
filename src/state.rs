@@ -1,5 +1,4 @@
-/// Implement Wifi state
-///
+//! Implement persistant state for current location
 use anyhow::{Context, Result};
 use chrono::Utc;
 use std::{fs, io};
@@ -15,11 +14,13 @@ use std::path::PathBuf;
 /// wifi SSIDs.
 const MAX_SECS_BEFORE_FORCE_UPDATE: i64 = 60 * 60;
 
+/// Struct implementing a cache for the application state
 pub struct Cache {
     path: PathBuf,
 }
 
 impl Cache {
+    /// Create a cache at location `path`.
     pub fn new(path: impl Into<PathBuf>) -> Self {
         Self { path: path.into() }
     }
@@ -28,7 +29,9 @@ impl Cache {
 /// Wifi locations
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Location {
+    /// Known location based on wifi ssid substring match
     Known(String),
+    /// Unknown location
     Unknown,
 }
 
@@ -39,6 +42,8 @@ pub struct State {
     timestamp: i64,
 }
 
+/// Error specific to the `Cache` struct.
+#[allow(missing_docs)]
 #[derive(Debug, Error)]
 pub enum CacheError {
     #[error("Cache IO Error")]

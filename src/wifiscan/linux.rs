@@ -2,9 +2,9 @@ use crate::wifiscan::{WiFi, WifiError, WifiInterface};
 use std::process::Command;
 
 impl WiFi {
+    /// Create linux `WiFi` interface
     pub fn new(interface: &str) -> Self {
         WiFi {
-            connection: None,
             interface: interface.to_owned(),
         }
     }
