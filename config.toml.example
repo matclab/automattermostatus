@@ -1,0 +1,35 @@
+# Automattermostatus example configuration
+#
+# Wifi interface name. Use to check that wifi is enabled (Mac and Windows)
+interface_name = 'wlp0s20f3'
+
+# Status string containing 3 fields separated by `::`
+#  - First field is the wifi substring that should be contained in a visible SSID
+#    for this status to be set
+#  - Second field is the emoji string for the custom status
+#  - Third field is the description text foir the custom status
+#
+status = ["corporatewifi::corplogo::On premise work",
+	  "homenet::house::Working home"]
+
+# Base url of the mattermost instanbce
+mm_url = 'https://mattermost.example.com'
+
+# Level of verbosity among Off, Error, Warn, Info, Debug, Trace
+verbose = 'Info'
+
+# Comand that should be executed to get mattermost private access token (the
+# token shall be printed on stdout). See
+# https://docs.mattermost.com/integrations/cloud-personal-access-tokens.html#creating-a-personal-access-token.
+mm_token_cmd = "secret-tool lookup name automattermostatus"
+
+# Definition of the day off (when automattermostatus do not update the user
+# custom status). If a day is no present then it is considered as a workday.
+# The attributes may be:
+# - `EveryWeek`: the day is always off
+# - `EvenWeek`: the day is off on even week (iso week number)
+# - `OddWeek`: the day is off on odd week (iso week number)
+[offdays]
+Sat = 'EveryWeek'
+Sun = 'EveryWeek'
+Wed = 'EvenWeek'

@@ -65,25 +65,57 @@ line.
 ### Config File
 The config file is created if it does not exist.  It is created or read in the following places depending on your OS:
 -    the [XDG user directory](https://www.freedesktop.org/wiki/Software/xdg-user-dirs/) specifications on Linux (usually `~/.config/automattermostatus/automattermostatus.toml`),
--    the [Known Folder system](https://msdn.microsoft.com/en-us/library/windows/desktop/dd378457.aspx) on Windows (usually `{FOLDERID_RoamingAppData}/automattermostatus/config`),
+-    the [Known Folder system](https://msdn.microsoft.com/en-us/library/windows/desktop/dd378457.aspx) on Windows (usually `{FOLDERID_RoamingAppData}\automattermostatus\config`),
 -    the [Standard Directories](https://developer.apple.com/library/content/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html#//apple_ref/doc/uid/TP40010672-CH2-SW6) on macOS (usually `$HOME/Library/Application Support/automattermost`).
 
 A sample config file is:
 
+<!-- `$ cat config.toml.example` as toml -->
 ```toml
+# Automattermostatus example configuration
+#
+# Wifi interface name. Use to check that wifi is enabled (Mac and Windows)
 interface_name = 'wlp0s20f3'
-status = ["corporatewifi::work::On premise work",
+
+# Status string containing 3 fields separated by `::`
+#  - First field is the wifi substring that should be contained in a visible SSID
+#    for this status to be set
+#  - Second field is the emoji string for the custom status
+#  - Third field is the description text foir the custom status
+#
+status = ["corporatewifi::corplogo::On premise work",
 	  "homenet::house::Working home"]
+
+# Base url of the mattermost instanbce
 mm_url = 'https://mattermost.example.com'
+
+# Level of verbosity among Off, Error, Warn, Info, Debug, Trace
 verbose = 'Info'
+
+# Comand that should be executed to get mattermost private access token (the
+# token shall be printed on stdout). See
+# https://docs.mattermost.com/integrations/cloud-personal-access-tokens.html#creating-a-personal-access-token.
 mm_token_cmd = "secret-tool lookup name automattermostatus"
+
+# Definition of the day off (when automattermostatus do not update the user
+# custom status). If a day is no present then it is considered as a workday.
+# The attributes may be:
+# - `EveryWeek`: the day is always off
+# - `EvenWeek`: the day is off on even week (iso week number)
+# - `OddWeek`: the day is off on odd week (iso week number)
+[offdays]
+Sat = 'EveryWeek'
+Sun = 'EveryWeek'
+Wed = 'EvenWeek'
 ```
 
 ### Mattermost private token
-Your private token is availabe under `Account Parameters > Security > Personal
-Access Token`. You should avoid to use `mm_token` parameter as it may leak
-your token to other people having access to your computer. It is recommended
-to use the `mm_token_cmd` option. 
+Your [private
+token](https://docs.mattermost.com/integrations/cloud-personal-access-tokens.html#creating-a-personal-access-token)
+is available under `Account Parameters > Security > Personal Access Token`.
+You should avoid to use `mm_token` parameter as it may leak your token to
+other people having access to your computer. It is recommended to use the
+`mm_token_cmd` option. 
 
 For example, on linux you may use `secret-tool`:
 ```sh
@@ -101,6 +133,10 @@ keyring get automattermostatus token
 ```
 
 I'll be pleased to insert here example for Windows and Mac OS. 
+
+## Dependencies
+On linux *automattermostatus* depends upon `NetworkManager` for getting the
+visible SSIDs without root rights.
 
 ## Installation
 You can either compile yourself or download the latest binaries from the
