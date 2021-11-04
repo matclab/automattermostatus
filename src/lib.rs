@@ -18,10 +18,7 @@ use std::thread::sleep;
 use std::{collections::HashMap, fs, time};
 use tracing::{debug, info};
 use tracing_subscriber::prelude::*;
-use tracing_subscriber::{
-    fmt,
-    layer::SubscriberExt, //, EnvFilter
-}; // to access get_log_level
+use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter};
 
 pub mod config;
 pub mod mattermost;
@@ -30,17 +27,18 @@ pub mod state;
 pub mod wifiscan;
 pub use config::{Args, WifiStatusConfig};
 pub use mattermost::MMStatus;
+use offtime::Off;
 pub use state::{Cache, Location, State};
 pub use wifiscan::{WiFi, WifiInterface};
 
 /// Setup logging to stdout
 /// (Tracing is a bit more involving to set up but will provide much more feature if needed)
-pub fn setup_tracing(_args: &Args) -> Result<()> {
+pub fn setup_tracing(args: &Args) -> Result<()> {
     let fmt_layer = fmt::layer().with_target(false);
-    //let filter_layer = EnvFilter::try_new(args.verbose.get_level_filter().to_string()).unwrap();
+    let filter_layer = EnvFilter::try_new(args.verbose.get_level_filter().to_string()).unwrap();
 
     tracing_subscriber::registry()
-        //.with(filter_layer)
+        .with(filter_layer)
         .with(fmt_layer)
         .init();
     Ok(())
