@@ -1,9 +1,9 @@
 #![warn(missing_docs)]
 #![doc = include_str!("../README.md")]
-use anyhow::{Context, Result};
 
 use ::lib::config::Args;
 use ::lib::*;
+use anyhow::{Context, Result};
 
 #[paw::main]
 fn main(args: Args) -> Result<()> {
