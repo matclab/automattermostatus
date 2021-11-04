@@ -1,5 +1,6 @@
 //! This module holds struct and helpers for parameters and configuration
 //!
+use crate::offtime::OffDays;
 use ::structopt::clap::AppSettings;
 use anyhow;
 use anyhow::{bail, Result};
@@ -7,7 +8,6 @@ use directories_next::ProjectDirs;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::path::PathBuf;
 use structopt;
-use tracing::debug;
 
 /// Status that shall be send when a wifi with `wifi_string` is being seen.
 #[derive(Debug, PartialEq)]
@@ -174,6 +174,7 @@ pub struct Args {
     ///
     /// Each triplet shall have the format:
     /// "wifi_substring::emoji_name::status_text"
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     #[structopt(short, long)]
     pub status: Vec<String>,
 
@@ -211,6 +212,11 @@ pub struct Args {
     #[structopt(flatten)]
     #[serde(deserialize_with = "de_from_str")]
     pub verbose: QuietVerbose,
+
+    #[structopt(skip)]
+    //#[serde(skip_serializing_if = "OffDays::is_empty")]
+    /// Days off for which the custom status shall not be changed
+    pub offdays: OffDays,
 }
 
 impl Default for Args {
@@ -226,19 +232,19 @@ impl Default for Args {
             delay: Some(60),
             state_dir: Some(
                 ProjectDirs::from("net", "clabaut", "automattermostatus")
-                    .unwrap()
+                    .expect("Unable to find a project dir")
                     .cache_dir()
                     .to_owned(),
             ),
             mm_token: None,
             mm_token_cmd: None,
-            mm_url: Some("https://mattermost.com".into()),
+            mm_url: Some("https://mattermost.example.com".into()),
             verbose: QuietVerbose {
                 verbosity_level: 1,
                 quiet_level: 0,
             },
+            offdays: OffDays::default(),
         };
-        debug!("Args::default : {:#?}", res);
         res
     }
 }
