@@ -70,7 +70,7 @@ impl State {
         fs::write(
             &cache.path,
             serde_json::to_string(&self)
-                .expect(&format!("Serialization of State Failed :{:?}", &self)),
+                .unwrap_or_else(|_| panic!("Serialization of State Failed :{:?}", &self)),
         )
         .with_context(|| format!("Writing to cache file {:?}", cache.path))?;
         Ok(())
