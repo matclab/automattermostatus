@@ -1,8 +1,7 @@
 //! Implement persistant state for current location
 use anyhow::{Context, Result};
 use chrono::Utc;
-use std::{fs, io};
-use thiserror::Error;
+use std::fs;
 use tracing::{debug, info};
 
 use crate::mattermost::MMStatus;
@@ -15,6 +14,7 @@ use std::path::PathBuf;
 const MAX_SECS_BEFORE_FORCE_UPDATE: i64 = 60 * 60;
 
 /// Struct implementing a cache for the application state
+#[derive(Debug)]
 pub struct Cache {
     path: PathBuf,
 }
@@ -42,14 +42,6 @@ pub struct State {
     timestamp: i64,
 }
 
-/// Error specific to the `Cache` struct.
-#[allow(missing_docs)]
-#[derive(Debug, Error)]
-pub enum CacheError {
-    #[error("Cache IO Error")]
-    IoError(#[from] io::Error),
-}
-
 impl State {
     /// Build a state, either by reading current persisted state in `cache`
     /// or by creating an empty default one.
@@ -75,8 +67,12 @@ impl State {
         info!("Set location to `{:?}`", location);
         self.location = location;
         self.timestamp = Utc::now().timestamp();
-        fs::write(&cache.path, serde_json::to_string(&self).unwrap())
-            .map_err(CacheError::IoError)?;
+        fs::write(
+            &cache.path,
+            serde_json::to_string(&self)
+                .expect(&format!("Serialization of State Failed :{:?}", &self)),
+        )
+        .with_context(|| format!("Writing to cache file {:?}", cache.path))?;
         Ok(())
     }
 

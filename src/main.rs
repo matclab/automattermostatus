@@ -51,7 +51,8 @@ fn setup_tracing(_args: &Args) -> Result<()> {
 /// `args.mm_token_cmd` if defined.
 fn update_token_with_command(mut args: Args) -> Result<Args> {
     if let Some(command) = &args.mm_token_cmd {
-        let params = split(command)?;
+        let params =
+            shell_words::split(command).context("Splitting mm_token_cmd into shell words")?;
         debug!("Running command {}", command);
         let output = Command::new(&params[0])
             .args(&params[1..])
@@ -73,15 +74,20 @@ fn update_token_with_command(mut args: Args) -> Result<Args> {
 fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
     let mut res = HashMap::new();
     for s in &args.status {
-        let sc: WifiStatusConfig = s.parse()?;
+        let sc: WifiStatusConfig = s.parse().with_context(|| format!("Parsing {}", s))?;
         debug!("Adding : {:?}", sc);
         res.insert(
             Location::Known(sc.wifi_string),
             MMStatus::new(
                 sc.text,
                 sc.emoji,
-                args.mm_url.as_ref().unwrap().clone(),
-                args.mm_token.clone().unwrap(),
+                args.mm_url
+                    .as_ref()
+                    .expect("Mattermost URL is not defined")
+                    .clone(),
+                args.mm_token
+                    .clone()
+                    .expect("Mattermost private access token is not defined"),
             ),
         );
     }
@@ -95,27 +101,40 @@ fn main(args: Args) -> Result<()> {
     let cfg: Args = confy::load("automattermostatus")?;
     // Merge config Default → Config File → command line args
     let args = Figment::from(Serialized::defaults(Args::default()))
-        .merge(Serialized::defaults(cfg))
+        .merge(Toml::file(&conf_file))
         .merge(Serialized::defaults(args))
-        .extract()?;
-    debug!("Merge config and parameters : {:#?}", args);
+        .extract()
+        .context("Merging configuration file and parameters")?;
+    debug!("Merged config and parameters : {:#?}", args);
 
     // Compute token if needed
-    let args = update_token_with_command(args)?;
-    let cache = get_cache(args.state_dir.to_owned())?;
-    let status_dict = prepare_status(&args)?;
+    let args = update_token_with_command(args).context("Get private token from mm_token_cmd")?;
+    let cache = get_cache(args.state_dir.to_owned()).context("Reading cached state")?;
+    let status_dict = prepare_status(&args).context("Building custom status messages")?;
 
-    let mut state = State::new(&cache)?;
-    let delay_duration = time::Duration::new(args.delay.unwrap().into(), 0);
-    let wifi = WiFi::new(&args.interface_name.unwrap());
-    if !wifi.is_wifi_enabled()? {
+    let mut state = State::new(&cache).context("Creating cache")?;
+    let delay_duration = time::Duration::new(
+        args.delay
+            .expect("Internal error: args.delay shouldn't be None")
+            .into(),
+        0,
+    );
+    let wifi = WiFi::new(
+        &args
+            .interface_name
+            .expect("Internal error: args.interface_name shouldn't be None"),
+    );
+    if !wifi
+        .is_wifi_enabled()
+        .context("Checking if wifi is enabled")?
+    {
         bail!("wifi is disabled");
     } else {
         info!("Wifi is enabled");
     }
 
     loop {
-        let ssids = wifi.visible_ssid()?;
+        let ssids = wifi.visible_ssid().context("Getting visible SSIDs")?;
         debug!("Visible SSIDs {:#?}", ssids);
         let mut found_ssid = false;
         // Search for known wifi in visible ssids
@@ -125,7 +144,9 @@ fn main(args: Args) -> Result<()> {
                     debug!("known wifi '{}' detected", wifi_substring);
                     found_ssid = true;
                     if let Some(mmstatus) = status_dict.get(l) {
-                        state.update_status(l.clone(), Some(mmstatus), &cache)?;
+                        state
+                            .update_status(l.clone(), Some(mmstatus), &cache)
+                            .context("Updating status")?;
                         break;
                     } else {
                         bail!("Internal error {:?} not found in statusdict", &l);
@@ -135,7 +156,9 @@ fn main(args: Args) -> Result<()> {
         }
         if !found_ssid {
             debug!("Unknown wifi");
-            state.update_status(Location::Unknown, None, &cache)?;
+            state
+                .update_status(Location::Unknown, None, &cache)
+                .context("Updating status")?;
         }
         if let Some(0) = args.delay {
             break;
