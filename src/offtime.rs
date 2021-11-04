@@ -1,10 +1,9 @@
 //! This module Provide the `Off` trait and `OffDays` struct
-use anyhow::Result;
 pub use chrono::Weekday;
 use chrono::{Date, Datelike, Local};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::trace;
+use tracing::{debug, trace};
 
 #[cfg(test)]
 use mockall::automock;
@@ -13,7 +12,7 @@ use mockall::automock;
 /// is not working
 pub trait Off {
     /// Is the user off now ?
-    fn is_off(&self) -> Result<bool>;
+    fn is_off(&self) -> bool;
 }
 
 /// Struct for describing the parity of the week for which the out of work day apply
@@ -63,21 +62,30 @@ impl OffDays {
     /// The user is off if date day is in OffDays and either,
     /// - parity is all
     /// - parity match the current iso week number
-    fn is_off_at_date(&self, date: impl Now) -> Result<bool> {
+    fn is_off_at_date(&self, date: impl Now) -> bool {
         let now = date.now();
         trace!("now: {:?}", now);
         trace!("now.weekday: {:?}", now.weekday());
+        let res: bool;
         if let Some(parity) = self.0.get(&now.weekday()) {
             trace!("match and parity = {:?}", parity);
-            match parity {
-                Parity::EveryWeek => Ok(true),
-                Parity::OddWeek => Ok(&now.iso_week().week() % 2 == 1),
-                Parity::EvenWeek => Ok(&now.iso_week().week() % 2 == 0),
-            }
+            res = match parity {
+                Parity::EveryWeek => true,
+                Parity::OddWeek => &now.iso_week().week() % 2 == 1,
+                Parity::EvenWeek => &now.iso_week().week() % 2 == 0,
+            };
         } else {
-            Ok(false)
+            res = false;
         }
+        debug!(
+            "{:?} {:?} is {} off",
+            &now.weekday(),
+            &now.iso_week(),
+            if !res { "not" } else { "" }
+        );
+        res
     }
+
     /// Return `true` if there are no OffDays.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
@@ -95,7 +103,7 @@ impl Off for OffDays {
     /// current day is in OffDays and either,
     /// - parity is all
     /// - parity match the current iso week number
-    fn is_off(&self) -> Result<bool> {
+    fn is_off(&self) -> bool {
         self.is_off_at_date(Time {})
     }
 }
@@ -103,6 +111,7 @@ impl Off for OffDays {
 #[cfg(test)]
 mod is_off_should {
     use super::*;
+    use anyhow::Result;
     use chrono::{Local, TimeZone, Weekday};
     use test_env_log::test; // Automatically trace tests
 
@@ -114,7 +123,7 @@ mod is_off_should {
         mock.expect_now()
             .times(1)
             .returning(|| Local.isoywd(2015, 1, Weekday::Tue));
-        assert_eq!(leave.is_off_at_date(mock).unwrap(), false);
+        assert_eq!(leave.is_off_at_date(mock), false);
         Ok(())
     }
 
@@ -126,7 +135,7 @@ mod is_off_should {
         mock.expect_now()
             .times(1)
             .returning(|| Local.isoywd(2015, 1, Weekday::Tue));
-        assert_eq!(leave.is_off_at_date(mock).unwrap(), true);
+        assert_eq!(leave.is_off_at_date(mock), true);
         Ok(())
     }
 
@@ -139,14 +148,14 @@ mod is_off_should {
         mock.expect_now()
             .times(1)
             .returning(|| Local.isoywd(2015, 15, Weekday::Wed));
-        assert_eq!(leave.is_off_at_date(mock).unwrap(), true);
+        assert_eq!(leave.is_off_at_date(mock), true);
 
         leave.insert(Weekday::Thu, Parity::EvenWeek);
         let mut mock = MockNow::new();
         mock.expect_now()
             .times(1)
             .returning(|| Local.isoywd(2015, 16, Weekday::Thu));
-        assert_eq!(leave.is_off_at_date(mock).unwrap(), true);
+        assert_eq!(leave.is_off_at_date(mock), true);
 
         Ok(())
     }
@@ -159,14 +168,14 @@ mod is_off_should {
         mock.expect_now()
             .times(1)
             .returning(|| Local.isoywd(2015, 15, Weekday::Fri));
-        assert_eq!(leave.is_off_at_date(mock).unwrap(), false);
+        assert_eq!(leave.is_off_at_date(mock), false);
 
         leave.insert(Weekday::Sun, Parity::OddWeek);
         let mut mock = MockNow::new();
         mock.expect_now()
             .times(1)
             .returning(|| Local.isoywd(2015, 16, Weekday::Sun));
-        assert_eq!(leave.is_off_at_date(mock).unwrap(), false);
+        assert_eq!(leave.is_off_at_date(mock), false);
         Ok(())
     }
 }
