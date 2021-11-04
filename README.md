@@ -36,6 +36,9 @@ OPTIONS:
         --delay <delay>                      
             delay between wifi SSID polling in seconds [env: DELAY=]
 
+        --expires-at <expires-at>            
+            Expiration time with the format hh:mm [env: EXPIRES_AT=]
+
     -i, --interface-name <interface-name>    
             wifi interface name [env: INTERFACE_NAME=]
 

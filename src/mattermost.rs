@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json as json;
 use std::fmt;
 use thiserror::Error;
-use tracing::debug;
+use tracing::{debug, log::warn};
 
 /// Implement errors specific to `MMStatus`
 #[allow(missing_docs)]
@@ -62,6 +62,39 @@ impl MMStatus {
             base_uri: uri,
             token,
         }
+    }
+    /// Add expiration time with the format "hh:mm" to the mattermost custom status
+    pub fn expires_at(mut self, time_str: &Option<String>) -> Self {
+        if let Some(ref s) = time_str {
+            let splitted: Vec<&str> = s.split(':').collect();
+            let hh: u32 = match splitted[0].parse() {
+                Ok(h) => h,
+                Err(_) => {
+                    warn!("Unable to get hour from {:?}", &time_str);
+                    0
+                }
+            };
+            let mm = if splitted.len() < 2 {
+                0
+            } else {
+                match splitted[1].parse() {
+                    Ok(m) => m,
+                    Err(_) => {
+                        warn!("Unable to get minutes from {:?}", &time_str);
+                        0
+                    }
+                }
+            };
+            let expiry = Utc::now().date().and_hms(hh, mm, 0);
+            if Utc::now() < expiry {
+                self.expires_at = Some(expiry);
+                self.duration = Some("date_and_time".to_owned());
+            } else {
+                debug!("now {:?} >= expiry {:?}", Utc::now(), expiry);
+            }
+        }
+        // let dt: NaiveDateTime = NaiveDate::from_ymd(2016, 7, 8).and_hms(9, 10, 11);
+        self
     }
     /// This function is essentially used for debugging or testing
     pub fn to_json(&self) -> Result<String, MMSError> {

@@ -98,7 +98,8 @@ pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
                 args.mm_token
                     .clone()
                     .expect("Mattermost private access token is not defined"),
-            ),
+            )
+            .expires_at(&args.expires_at),
         );
     }
     Ok(res)

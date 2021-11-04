@@ -203,6 +203,11 @@ pub struct Args {
     #[structopt(long, env, parse(from_os_str))]
     pub state_dir: Option<PathBuf>,
 
+    /// Expiration time with the format hh:mm
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[structopt(long, env)]
+    pub expires_at: Option<String>,
+
     /// delay between wifi SSID polling in seconds
     #[serde(skip_serializing_if = "Option::is_none")]
     #[structopt(long, env)]
@@ -243,6 +248,7 @@ impl Default for Args {
                 verbosity_level: 1,
                 quiet_level: 0,
             },
+            expires_at: Some("19:30".to_string()),
             offdays: OffDays::default(),
         };
         res
