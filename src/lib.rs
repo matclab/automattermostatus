@@ -128,7 +128,7 @@ pub fn merge_config_and_params(args: &Args) -> Result<Args> {
     Ok(res)
 }
 
-/// Body of the main application loop, looking for a known SSID and updating
+/// Main application loop, looking for a known SSID and updating
 /// mattermost custom status accordingly.
 pub fn get_wifi_and_update_status_loop(
     args: Args,
@@ -156,31 +156,33 @@ pub fn get_wifi_and_update_status_loop(
         info!("Wifi is enabled");
     }
     loop {
-        let ssids = wifi.visible_ssid().context("Getting visible SSIDs")?;
-        debug!("Visible SSIDs {:#?}", ssids);
-        let mut found_ssid = false;
-        // Search for known wifi in visible ssids
-        for l in status_dict.keys() {
-            if let Location::Known(wifi_substring) = l {
-                if ssids.iter().any(|x| x.contains(wifi_substring)) {
-                    debug!("known wifi '{}' detected", wifi_substring);
-                    found_ssid = true;
-                    if let Some(mmstatus) = status_dict.get(l) {
-                        state
-                            .update_status(l.clone(), Some(mmstatus), &cache)
-                            .context("Updating status")?;
-                        break;
-                    } else {
-                        bail!("Internal error {:?} not found in statusdict", &l);
+        if !args.offdays.is_off() {
+            let ssids = wifi.visible_ssid().context("Getting visible SSIDs")?;
+            debug!("Visible SSIDs {:#?}", ssids);
+            let mut found_ssid = false;
+            // Search for known wifi in visible ssids
+            for l in status_dict.keys() {
+                if let Location::Known(wifi_substring) = l {
+                    if ssids.iter().any(|x| x.contains(wifi_substring)) {
+                        debug!("known wifi '{}' detected", wifi_substring);
+                        found_ssid = true;
+                        if let Some(mmstatus) = status_dict.get(l) {
+                            state
+                                .update_status(l.clone(), Some(mmstatus), &cache)
+                                .context("Updating status")?;
+                            break;
+                        } else {
+                            bail!("Internal error {:?} not found in statusdict", &l);
+                        }
                     }
                 }
             }
-        }
-        if !found_ssid {
-            debug!("Unknown wifi");
-            state
-                .update_status(Location::Unknown, None, &cache)
-                .context("Updating status")?;
+            if !found_ssid {
+                debug!("Unknown wifi");
+                state
+                    .update_status(Location::Unknown, None, &cache)
+                    .context("Updating status")?;
+            }
         }
         if let Some(0) = args.delay {
             break;
