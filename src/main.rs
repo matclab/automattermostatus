@@ -2,11 +2,14 @@
 #![doc = include_str!("../README.md")]
 use ::lib::mattermost::MMStatus;
 use anyhow::{bail, Context, Result};
-use figment::{providers::Serialized, Figment};
-use shell_words::split;
-use std::collections::HashMap;
+use directories_next::ProjectDirs;
+use figment::{
+    providers::{Format, Serialized, Toml},
+    Figment,
+};
 use std::process::Command;
 use std::time;
+use std::{collections::HashMap, fs};
 
 use ::lib::config::{Args, WifiStatusConfig};
 use ::lib::state::{Cache, Location, State};
@@ -96,9 +99,19 @@ fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
 
 #[paw::main]
 fn main(args: Args) -> Result<()> {
-    setup_tracing(&args)?;
-    // get config from OS specific file path
-    let cfg: Args = confy::load("automattermostatus")?;
+    setup_tracing(&args).context("Setting up tracing")?;
+    let default_args = Args::default();
+    debug!("default Args : {:#?}", default_args);
+    let conf_dir = ProjectDirs::from("net", "clabaut", "automattermostatus")
+        .expect("Unable to find a project dir")
+        .config_dir()
+        .to_owned();
+    fs::create_dir_all(&conf_dir).with_context(|| format!("Creating conf dir {:?}", &conf_dir))?;
+    let conf_file = conf_dir.join("automattermostatus.toml");
+
+    let config_args: Args = Figment::from(Toml::file(&conf_file)).extract()?;
+    debug!("config Args : {:#?}", config_args);
+    debug!("parameter Args : {:#?}", args);
     // Merge config Default → Config File → command line args
     let args = Figment::from(Serialized::defaults(Args::default()))
         .merge(Toml::file(&conf_file))

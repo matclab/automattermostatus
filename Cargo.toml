@@ -30,9 +30,8 @@ tracing-subscriber = { version = "0.2.25", features = ["registry", "chrono", "tr
 chrono = {version="0.4.19", features=["serde"]}
 shell-words = "1.0.0"
 quick-xml = "0.22.0"
-confy = "0.4.0"
 tracing-log = "0.1.2"
-figment = "0.10.6"
+figment = { version = "0.10.6", features = ["toml"] }
 directories-next = "2.0.0"
 ureq = { version = "2.3.0", features = ["json"] }
 #merge = "0.1.0"
@@ -40,7 +39,9 @@ ureq = { version = "2.3.0", features = ["json"] }
 [dev-dependencies]
 mktemp = "0.4.1"
 httpmock = "0.6.2"
-#mockall = "0.10.2"
+mockall = "0.10.2"
+test-env-log = {version="0.2.7", default-features = false, features=["trace"]}
+tracing-subscriber = { version = "0.2.25", features = [ "fmt",  "env-filter"], default-features = false }
 
 #[source.crates-io]
 #replace-with = "vendored-sources"
