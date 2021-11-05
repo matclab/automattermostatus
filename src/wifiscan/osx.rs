@@ -5,7 +5,6 @@ use std::process::Command;
 impl WiFi {
     pub fn new(interface: &str) -> Self {
         WiFi {
-            connection: None,
             interface: interface.to_owned(),
         }
     }
