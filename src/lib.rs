@@ -24,6 +24,7 @@ pub mod config;
 pub mod mattermost;
 pub mod offtime;
 pub mod state;
+pub mod utils;
 pub mod wifiscan;
 pub use config::{Args, WifiStatusConfig};
 pub use mattermost::MMStatus;
@@ -146,6 +147,7 @@ pub fn get_wifi_and_update_status_loop(
     let wifi = WiFi::new(
         &args
             .interface_name
+            .clone()
             .expect("Internal error: args.interface_name shouldn't be None"),
     );
     if !wifi
@@ -157,7 +159,7 @@ pub fn get_wifi_and_update_status_loop(
         info!("Wifi is enabled");
     }
     loop {
-        if !args.offdays.is_off() {
+        if !&args.is_off() {
             let ssids = wifi.visible_ssid().context("Getting visible SSIDs")?;
             debug!("Visible SSIDs {:#?}", ssids);
             let mut found_ssid = false;

@@ -1,9 +1,11 @@
 //! This module holds struct and helpers for parameters and configuration
 //!
-use crate::offtime::OffDays;
+use crate::offtime::{Off, OffDays};
+use crate::utils::parse_from_hmstr;
 use ::structopt::clap::AppSettings;
 use anyhow;
 use anyhow::{bail, Result};
+use chrono::Local;
 use directories_next::ProjectDirs;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::path::PathBuf;
@@ -203,7 +205,24 @@ pub struct Args {
     #[structopt(long, env, parse(from_os_str))]
     pub state_dir: Option<PathBuf>,
 
+    /// beginning of status update with the format hh:mm
+    ///
+    /// Before this time the status won't be updated
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[structopt(short, long, env)]
+    pub begin: Option<String>,
+
+    /// end of status update with the format hh:mm
+    ///
+    /// After this time the status won't be updated
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[structopt(short, long, env)]
+    pub end: Option<String>,
+
     /// Expiration time with the format hh:mm
+    ///
+    /// This parameter is used to set the custom status expiration time
+    /// Set to "0" to avoid setting expiration time
     #[serde(skip_serializing_if = "Option::is_none")]
     #[structopt(long, env)]
     pub expires_at: Option<String>,
@@ -249,8 +268,26 @@ impl Default for Args {
                 quiet_level: 0,
             },
             expires_at: Some("19:30".to_string()),
+            begin: Some("8:00".to_string()),
+            end: Some("19:30".to_string()),
             offdays: OffDays::default(),
         };
         res
+    }
+}
+
+impl Off for Args {
+    fn is_off(&self) -> bool {
+        self.offdays.is_off() // The day is off, so we are off
+            || if let Some(begin) = parse_from_hmstr(&self.begin) {
+                    Local::now() < begin // now is before begin, we are off
+                } else {
+                    false // now is after begin, we are on duty if not after end
+                }
+            || if let Some(end) = parse_from_hmstr(&self.end) {
+                    Local::now() > end // now is after end, we are off
+                } else {
+                    false // now is before end, we are on duty
+                }
     }
 }

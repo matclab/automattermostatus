@@ -1,11 +1,12 @@
 //! Module responsible for sending custom status change to mattermost.
+use crate::utils::parse_from_hmstr;
 use anyhow::Result;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use serde_json as json;
 use std::fmt;
 use thiserror::Error;
-use tracing::{debug, log::warn};
+use tracing::debug;
 
 /// Implement errors specific to `MMStatus`
 #[allow(missing_docs)]
@@ -30,7 +31,7 @@ pub struct MMStatus {
     pub duration: Option<String>,
     /// custom status expiration
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub expires_at: Option<DateTime<Utc>>,
+    pub expires_at: Option<DateTime<Local>>,
     /// base URL of the mattermost server like https://mattermost.example.com
     #[serde(skip_serializing)]
     base_uri: String,
@@ -65,32 +66,13 @@ impl MMStatus {
     }
     /// Add expiration time with the format "hh:mm" to the mattermost custom status
     pub fn expires_at(mut self, time_str: &Option<String>) -> Self {
-        if let Some(ref s) = time_str {
-            let splitted: Vec<&str> = s.split(':').collect();
-            let hh: u32 = match splitted[0].parse() {
-                Ok(h) => h,
-                Err(_) => {
-                    warn!("Unable to get hour from {:?}", &time_str);
-                    0
-                }
-            };
-            let mm = if splitted.len() < 2 {
-                0
-            } else {
-                match splitted[1].parse() {
-                    Ok(m) => m,
-                    Err(_) => {
-                        warn!("Unable to get minutes from {:?}", &time_str);
-                        0
-                    }
-                }
-            };
-            let expiry = Utc::now().date().and_hms(hh, mm, 0);
-            if Utc::now() < expiry {
+        // do not set expiry time if set in the past
+        if let Some(expiry) = parse_from_hmstr(&time_str) {
+            if Local::now() < expiry {
                 self.expires_at = Some(expiry);
                 self.duration = Some("date_and_time".to_owned());
             } else {
-                debug!("now {:?} >= expiry {:?}", Utc::now(), expiry);
+                debug!("now {:?} >= expiry {:?}", Local::now(), expiry);
             }
         }
         // let dt: NaiveDateTime = NaiveDate::from_ymd(2016, 7, 8).and_hms(9, 10, 11);

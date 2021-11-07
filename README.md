@@ -6,7 +6,7 @@ Development site is hosted on [gitlab](https://gitlab.com/matclab/automattermost
 Here after is the command line help.
 <!-- `$ target/debug/automattermostatus --help` as text -->
 ```text
-automattermostatus 0.1.3
+automattermostatus 0.1.4-pre
 Automate mattermost status with the help of wifi network
 
 Use current visible wifi SSID to automate your mattermost status. This program is meant to either be running in
@@ -33,12 +33,22 @@ FLAGS:
 
 
 OPTIONS:
+    -b, --begin <begin>                      
+            beginning of status update with the format hh:mm
+            
+            Before this time the status won't be updated [env: BEGIN=]
         --delay <delay>                      
             delay between wifi SSID polling in seconds [env: DELAY=]
 
+    -e, --end <end>                          
+            end of status update with the format hh:mm
+            
+            After this time the status won't be updated [env: END=]
         --expires-at <expires-at>            
-            Expiration time with the format hh:mm [env: EXPIRES_AT=]
-
+            Expiration time with the format hh:mm
+            
+            This parameter is used to set the custom status expiration time Set to "0" to avoid setting expiration time
+            [env: EXPIRES_AT=]
     -i, --interface-name <interface-name>    
             wifi interface name [env: INTERFACE_NAME=]
 
