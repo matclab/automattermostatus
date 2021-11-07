@@ -6,7 +6,7 @@ Development site is hosted on [gitlab](https://gitlab.com/matclab/automattermost
 Here after is the command line help.
 <!-- `$ target/debug/automattermostatus --help` as text -->
 ```text
-automattermostatus 0.1.4-pre
+automattermostatus 0.1.4
 Automate mattermost status with the help of wifi network
 
 Use current visible wifi SSID to automate your mattermost status. This program is meant to either be running in
@@ -109,15 +109,6 @@ verbose = 'Info'
 # token shall be printed on stdout). See
 # https://docs.mattermost.com/integrations/cloud-personal-access-tokens.html#creating-a-personal-access-token.
 mm_token_cmd = "secret-tool lookup name automattermostatus"
-
-# begin and end time bewteen which mattermost status will be updated (only
-# for working days. See `offdays` hereafter
-begin = "8:00"
-end = "19:30"
-
-# Expiry time of mattermost status (i.e. time after which mattermost will auto
-# expire the custom status).
-expires_at = "19:30"
 
 # Definition of the day off (when automattermostatus do not update the user
 # custom status). If a day is no present then it is considered as a workday.

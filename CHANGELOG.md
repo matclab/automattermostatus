@@ -1,4 +1,9 @@
-# Next release
+
+# v0.1.4 : Still working release process
+- add begin and end time parameters
+- add off days configuration with week selection by parity
+- add expires_at to define mattermosts status expiration time
+- better error messages
 
 # v0.1.3 : Still working release process
 No functional change.

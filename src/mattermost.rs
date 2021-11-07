@@ -67,7 +67,7 @@ impl MMStatus {
     /// Add expiration time with the format "hh:mm" to the mattermost custom status
     pub fn expires_at(mut self, time_str: &Option<String>) -> Self {
         // do not set expiry time if set in the past
-        if let Some(expiry) = parse_from_hmstr(&time_str) {
+        if let Some(expiry) = parse_from_hmstr(time_str) {
             if Local::now() < expiry {
                 self.expires_at = Some(expiry);
                 self.duration = Some("date_and_time".to_owned());
