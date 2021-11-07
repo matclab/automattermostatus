@@ -118,7 +118,8 @@ pub fn merge_config_and_params(args: &Args) -> Result<Args> {
     let conf_file = conf_dir.join("automattermostatus.toml");
     if !conf_file.exists() {
         info!("Write {:?} default config file", &conf_file);
-        fs::write(&conf_file, toml::to_string(&Args::default())?).unwrap_or_else(|_| panic!("Unable to write default config file {:?}", conf_file));
+        fs::write(&conf_file, toml::to_string(&Args::default())?)
+            .unwrap_or_else(|_| panic!("Unable to write default config file {:?}", conf_file));
     }
 
     let config_args: Args = Figment::from(Toml::file(&conf_file)).extract()?;
