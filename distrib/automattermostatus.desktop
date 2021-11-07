@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=Auto mattermo status
+Terminal=false
+Exec=/usr/bin/automattermostauts
+Type=Application
