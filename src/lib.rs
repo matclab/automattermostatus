@@ -73,7 +73,7 @@ pub fn update_token_with_command(mut args: Args) -> Result<Args> {
         if token.len() == 0 {
             bail!("command '{}' returns nothing", &command);
         }
-        // Do not spit secret on stdout on released binary.
+        // /!\ Do not spit secret on stdout on released binary.
         //debug!("setting token to {}", token);
         args.mm_token = Some(token.to_string());
     }
@@ -116,6 +116,10 @@ pub fn merge_config_and_params(args: &Args) -> Result<Args> {
         .to_owned();
     fs::create_dir_all(&conf_dir).with_context(|| format!("Creating conf dir {:?}", &conf_dir))?;
     let conf_file = conf_dir.join("automattermostatus.toml");
+    if !conf_file.exists() {
+        info!("Write {:?} default config file", &conf_file);
+        fs::write(&conf_file, toml::to_string(&Args::default())?).unwrap_or_else(|_| panic!("Unable to write default config file {:?}", conf_file));
+    }
 
     let config_args: Args = Figment::from(Toml::file(&conf_file)).extract()?;
     debug!("config Args : {:#?}", config_args);
