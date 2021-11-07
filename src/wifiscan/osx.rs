@@ -3,6 +3,7 @@ use crate::wifiscan::{WiFi, WifiError, WifiInterface};
 use std::process::Command;
 
 impl WiFi {
+    /// Create MacOS `WiFi` interface
     pub fn new(interface: &str) -> Self {
         WiFi {
             interface: interface.to_owned(),
