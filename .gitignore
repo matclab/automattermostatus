@@ -2,3 +2,5 @@
 /target-cross
 /vendor
 /cargo-timing*
+/wifi-rs
+/docker
