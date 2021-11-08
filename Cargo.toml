@@ -3,6 +3,12 @@
 name = "automattermostatus"
 version = "0.1.4"
 edition = "2018"
+license = "Apache-2.0"
+categories = ["command-line-utilities"]
+homepage = "https://gitlab.com/matclab/automattermostatus/"
+repository = "https://gitlab.com/matclab/automattermostatus/"
+description = "Automate your mattermost custom status with the help of visible wifi SSID."
+readme = "README.md" 
 
 # We use a separate lib in order to be able to run tests and doctests
 [lib]
