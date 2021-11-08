@@ -9,6 +9,16 @@ homepage = "https://gitlab.com/matclab/automattermostatus/"
 repository = "https://gitlab.com/matclab/automattermostatus/"
 description = "Automate your mattermost custom status with the help of visible wifi SSID."
 readme = "README.md" 
+include = [
+    "src/**/*.rs",
+    "Cargo.toml",
+    "Cargo.lock",
+    "config.toml.example",
+    "README.md",
+    "CHANGELOG.md",
+    "distrib/automattermostatus.desktop"
+]
+
 
 # We use a separate lib in order to be able to run tests and doctests
 [lib]
