@@ -23,6 +23,14 @@ verbose = 'Info'
 # https://docs.mattermost.com/integrations/cloud-personal-access-tokens.html#creating-a-personal-access-token.
 mm_token_cmd = "secret-tool lookup name automattermostatus"
 
+# set expiry time for custom mattermost status
+expires_at = "19:30"
+
+# set begin and end time of the working period. Outside of this period, custom
+# status won't be set.
+begin = "8:00"
+end = "19:30"
+
 # Definition of the day off (when automattermostatus do not update the user
 # custom status). If a day is no present then it is considered as a workday.
 # The attributes may be:
