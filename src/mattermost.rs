@@ -20,7 +20,7 @@ pub enum MMSError {
 
 /// Custom struct to serialize the HTTP POST data into a json objecting using serde_json
 /// For a description of these fields see the [MatterMost OpenApi sources](https://github.com/mattermost/mattermost-api-reference/blob/master/v4/source/status.yaml)
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MMStatus {
     /// custom status text description
     pub text: String,

@@ -82,6 +82,9 @@ pub fn update_token_with_command(mut args: Args) -> Result<Args> {
 
 /// Prepare a dictionnary of `Status` ready to be send to mattermost
 /// server depending upon the location being found.
+///
+/// TODO: should be done when used, because of expires_at field which is set or no depending upon
+/// current time
 pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
     let mut res = HashMap::new();
     for s in &args.status {
@@ -100,7 +103,6 @@ pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
                     .clone()
                     .expect("Mattermost private access token is not defined"),
             )
-            .expires_at(&args.expires_at),
         );
     }
     Ok(res)
@@ -139,7 +141,7 @@ pub fn merge_config_and_params(args: &Args) -> Result<Args> {
 /// mattermost custom status accordingly.
 pub fn get_wifi_and_update_status_loop(
     args: Args,
-    status_dict: HashMap<Location, MMStatus>,
+    mut status_dict:  HashMap<Location, MMStatus>,
 ) -> Result<()> {
     let cache = get_cache(args.state_dir.to_owned()).context("Reading cached state")?;
     let mut state = State::new(&cache).context("Creating cache")?;
@@ -169,19 +171,16 @@ pub fn get_wifi_and_update_status_loop(
             debug!("Visible SSIDs {:#?}", ssids);
             let mut found_ssid = false;
             // Search for known wifi in visible ssids
-            for l in status_dict.keys() {
+            for (l, mmstatus) in  status_dict.iter_mut() {
                 if let Location::Known(wifi_substring) = l {
                     if ssids.iter().any(|x| x.contains(wifi_substring)) {
                         debug!("known wifi '{}' detected", wifi_substring);
                         found_ssid = true;
-                        if let Some(mmstatus) = status_dict.get(l) {
-                            state
-                                .update_status(l.clone(), Some(mmstatus), &cache)
-                                .context("Updating status")?;
-                            break;
-                        } else {
-                            bail!("Internal error {:?} not found in statusdict", &l);
-                        }
+                        let mmstatus = mmstatus.clone().expires_at(&args.expires_at);
+                        state
+                            .update_status(l.clone(), Some(&mmstatus), &cache)
+                            .context("Updating status")?;
+                        break;
                     }
                 }
             }
