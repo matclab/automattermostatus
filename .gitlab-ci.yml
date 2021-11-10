@@ -141,6 +141,12 @@ test-linux-beta:
     - 'curl --fail-with-body --user gitlab-uplaod:$GITLAB_PACKAGE_TOKENCI_JOB_TOKEN --upload-file ${LINUX_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/${LINUX_AMD64_BINARY}'
 
 
+## TODO : use gitlab package API to wait for  all binaries to be
+# uploaded.
+#.wait-upload:
+#  image: curlimages/curl:latest
+#  script: ci/wait-until curl -fIsS
+
 release:
   stage: release
     #needs: [upload]
