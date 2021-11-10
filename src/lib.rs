@@ -102,7 +102,7 @@ pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
                 args.mm_token
                     .clone()
                     .expect("Mattermost private access token is not defined"),
-            )
+            ),
         );
     }
     Ok(res)
@@ -141,7 +141,7 @@ pub fn merge_config_and_params(args: &Args) -> Result<Args> {
 /// mattermost custom status accordingly.
 pub fn get_wifi_and_update_status_loop(
     args: Args,
-    mut status_dict:  HashMap<Location, MMStatus>,
+    mut status_dict: HashMap<Location, MMStatus>,
 ) -> Result<()> {
     let cache = get_cache(args.state_dir.to_owned()).context("Reading cached state")?;
     let mut state = State::new(&cache).context("Creating cache")?;
@@ -171,7 +171,7 @@ pub fn get_wifi_and_update_status_loop(
             debug!("Visible SSIDs {:#?}", ssids);
             let mut found_ssid = false;
             // Search for known wifi in visible ssids
-            for (l, mmstatus) in  status_dict.iter_mut() {
+            for (l, mmstatus) in status_dict.iter_mut() {
                 if let Location::Known(wifi_substring) = l {
                     if ssids.iter().any(|x| x.contains(wifi_substring)) {
                         debug!("known wifi '{}' detected", wifi_substring);
