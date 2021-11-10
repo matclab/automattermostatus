@@ -1,4 +1,4 @@
-name: Rust MacOS Release
+name: Rust  Release
 
 on:
   push:
@@ -11,7 +11,13 @@ on:
 jobs:
   release-macos:
     name: release-macos
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        os:
+        - ubuntu-latest
+        - windows-latest
+        - macOS-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v2
@@ -25,17 +31,14 @@ jobs:
         env:
           RUSTFLAGS: "-D warnings" # Disallow warnings
         run: cargo build --release
-      - uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          prerelease: false
-            #automatic_release_tag: latest-macos
-          files: |
-            target/release/automattermostatus
       - name: upload to gitlab
         env:
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
-        run: 'curl --fail-with-body --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/v0.1.2/automattermostatus-macos-amd64'
+          OS: ${{ matrix.os }}
+        run: |
+          if [[ $OS == macOS-latest ]]  then 'curl --fail-with-body --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/v0.1.2/automattermostatus-macos-amd64' ; else  true; fi
+          if [[ $OS == ubuntu-latest ]]  then 'curl --fail-with-body --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/v0.1.2/automattermostatus-linux-amd64' ; else  true; fi
+          if [[ $OS == windows-latest ]]  then 'curl --fail-with-body --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus.exe https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/v0.1.2/automattermostatus-windows-amd64.exe' ; else  true; fi
 
 
 
