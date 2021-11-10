@@ -71,7 +71,7 @@ build-linux:
 test-linux:
   stage: build
   before_script:
-    - if [ ! -x .cargo/bin/cargo2junit ] then cargo install cargo2junit; fi
+    - if [ ! -x .cargo/bin/cargo2junit ] ; then cargo install cargo2junit; fi
   script:
     - cargo test -- -Z unstable-options --format json --report-time | .cargo/bin/cargo2junit > tests.xml
   artifacts:
@@ -85,7 +85,7 @@ test-linux-beta:
   image: instrumentisto/rust:beta
   stage: build
   before_script:
-    - if [ ! -x .cargo/bin/cargo2junit ] then cargo install cargo2junit; fi
+    - if [ ! -x .cargo/bin/cargo2junit ] ;  then cargo install cargo2junit; fi
   script:
     - cargo test -- -Z unstable-options --format json --report-time | .cargo/bin/cargo2junit > tests.xml
   artifacts:
