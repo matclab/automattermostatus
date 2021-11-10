@@ -44,6 +44,7 @@ jobs:
           RUSTFLAGS: "-D warnings" # Disallow warnings
         with:
           command:  build
+          args: --release
       - name: upload to gitlab
         env:
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
