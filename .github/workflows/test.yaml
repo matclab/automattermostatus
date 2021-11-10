@@ -20,7 +20,6 @@ jobs:
           - beta
           - nightly
     runs-on: ${{ matrix.os }}
-    needs: [compile]
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v2
