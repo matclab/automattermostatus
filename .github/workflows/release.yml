@@ -22,15 +22,28 @@ jobs:
       - name: Setup | Checkout
         uses: actions/checkout@v2
       - name: Setup | Rust
-        uses: ATiltedTree/setup-rust@v1
+        uses: actions-rs/toolchain@v1
         with:
-          rust-version: stable
-      - name: test 
-        run: cargo test
-      - name: compile
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command:  test
+      - name: Build | Check
+        uses: actions-rs/cargo@v1
         env:
           RUSTFLAGS: "-D warnings" # Disallow warnings
-        run: cargo build --release
+        with:
+          command:  build
       - name: upload to gitlab
         env:
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
