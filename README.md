@@ -160,8 +160,16 @@ On linux *automattermostatus* depends upon `NetworkManager` for getting the
 visible SSIDs without root rights.
 
 ## Installation
-You can either compile yourself or download the latest binaries from the
-[release page](https://gitlab.com/matclab/automattermostatus/-/releases).
+You can either compile yourself, download the latest binaries from the
+[release page](https://gitlab.com/matclab/automattermostatus/-/releases) or
+install one of the available packages.
+
+### Arch linux
+Use your favorite aur helper. for example:
+```
+yay -S automattermostatus
+```
+
 
 ## Compilation
 
