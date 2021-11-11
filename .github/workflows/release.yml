@@ -9,12 +9,13 @@ on:
       - 'v*'
 
 jobs:
-  release-linux-macos:
-    name: release-linux-macos
+  release-allos:
+    name: release for all OS
     strategy:
       matrix:
         os:
         - ubuntu-latest
+        - windows-latest
         - macOS-latest
     runs-on: ${{ matrix.os }}
     steps:
@@ -44,54 +45,20 @@ jobs:
         with:
           command:  build
           args: --release
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=SOURCE_TAG::${GITHUB_REF/refs\/tags\//}
+        shell: bash
       - name: upload to gitlab
         env:
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
           OS: ${{ matrix.os }}
+          SOURCE_TAG: ${{ steps.get_version.outputs.SOURCE_TAG }}
+        shell: bash
         run: |
-          if [[ $OS == macOS-latest ]] ; then curl -f --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/v0.1.2/automattermostatus-macos-amd64 ; else  true; fi
-          if [[ $OS == ubuntu-latest ]] ; then curl -f --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/v0.1.2/automattermostatus-linux-amd64 ; else  true; fi
-
-
-
-  release-windows:
-    name: release-windows
-    strategy:
-      matrix:
-        os:
-        - windows-latest
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Setup | Checkout
-        uses: actions/checkout@v2
-      - name: Setup | Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Test
-        uses: actions-rs/cargo@v1
-        with:
-          command:  test
-      - name: Build | Check
-        uses: actions-rs/cargo@v1
-        env:
-          RUSTFLAGS: "-D warnings" # Disallow warnings
-        with:
-          command:  build
-          args: --release
-      - name: upload to gitlab
-        env:
-          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
-        run: 'curl -f --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus.exe https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/v0.1.2/automattermostatus-windows-amd64.exe'
+          if [[ $OS == macOS-latest ]] ; then curl -f --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/"${SOURCE_TAG}"/automattermostatus-macos-amd64 ; else  true; fi
+          if [[ $OS == ubuntu-latest ]] ; then curl -f --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/"${SOURCE_TAG}"/automattermostatus-linux-amd64 ; else  true; fi
+          if [[ $OS == windows-latest ]] ; then curl -f --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/"${SOURCE_TAG}"/automattermostatus-linux-amd64 ; else  true; fi
 
 
 
