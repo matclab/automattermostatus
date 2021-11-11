@@ -140,16 +140,16 @@ test-linux-beta:
     - 'curl --fail-with-body --user gitlab-uplaod:$GITLAB_PACKAGE_TOKEN --upload-file ${WINDOWS_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/${WINDOWS_AMD64_BINARY}'
     - 'curl --fail-with-body --user gitlab-uplaod:$GITLAB_PACKAGE_TOKENCI_JOB_TOKEN --upload-file ${LINUX_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/${LINUX_AMD64_BINARY}'
 
-
-## TODO : use gitlab package API to wait for  all binaries to be
-# uploaded.
-#.wait-upload:
-#  image: curlimages/curl:latest
-#  script: ci/wait-until curl -fIsS
+wait-upload:
+  image: curlimages/curl:latest
+  script: 
+    - ci/wait-until 'curl -fIsS ${PACKAGE_REGISTRY_URL}{LINUX_AMD64_BINARY}' 1200
+    - ci/wait-until 'curl -fIsS ${PACKAGE_REGISTRY_URL}{MACOS_AMD64_BINARY}' 1200
+    - ci/wait-until 'curl -fIsS ${PACKAGE_REGISTRY_URL}{WINDOWS_AMD64_BINARY}' 1200
 
 release:
   stage: release
-    #needs: [upload]
+  needs: [wait-upload]
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+.*$/
@@ -163,9 +163,9 @@ release:
     assets: # Optional, multiple asset links
       links:
         - name: "Linux build : ${LINUX_AMD64_BINARY}"
-          url: ${PACKAGE_REGISTRY_URL}/linux/${LINUX_AMD64_BINARY}
+          url: ${PACKAGE_REGISTRY_URL}${LINUX_AMD64_BINARY}
         - name: "Windows build : ${WINDOWS_AMD64_BINARY}"
-          url: ${PACKAGE_REGISTRY_URL}/windows${WINDOWS_AMD64_BINARY}
+          url: ${PACKAGE_REGISTRY_URL}${WINDOWS_AMD64_BINARY}
         - name: 'MacOS build : ${MACOS_AMD64_BINARY}'
-          url: ${PACKAGE_REGISTRY_URL}/windows${MACOS_AMD64_BINARY}
+          url: ${PACKAGE_REGISTRY_URL}${MACOS_AMD64_BINARY}
 
