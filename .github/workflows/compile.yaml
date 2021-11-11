@@ -2,6 +2,10 @@ name: Rust Compilation
 
 on:
   push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '*.*'
   pull_request:
 
 jobs:
