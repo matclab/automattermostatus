@@ -58,7 +58,7 @@ jobs:
         run: |
           if [[ $OS == macOS-latest ]] ; then curl -f --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/"${SOURCE_TAG}"/automattermostatus-macos-amd64 ; else  true; fi
           if [[ $OS == ubuntu-latest ]] ; then curl -f --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/"${SOURCE_TAG}"/automattermostatus-linux-amd64 ; else  true; fi
-          if [[ $OS == windows-latest ]] ; then curl -f --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/"${SOURCE_TAG}"/automattermostatus-linux-amd64 ; else  true; fi
+          if [[ $OS == windows-latest ]] ; then curl -f --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus.exe https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/"${SOURCE_TAG}"/automattermostatus-windows-amd64.exe ; else  true; fi
 
 
 
