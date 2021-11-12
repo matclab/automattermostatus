@@ -35,11 +35,28 @@ pub fn parse_from_hmstr(time_str: &Option<String>) -> Option<DateTime<Local>> {
     }
 }
 
-//#[cfg(test)]
-//mod should {
-//    use super::*;
-//
-//    #[test]
-//    fn take_into_account_timezone() {
-//    }
-//}
+#[cfg(test)]
+mod should {
+    use super::*;
+
+    #[test]
+    fn return_none_if_unparsable() {
+        assert_eq!(None, parse_from_hmstr(&None));
+        assert_eq!(None, parse_from_hmstr(&Some("biii".to_string())));
+        assert_eq!(None, parse_from_hmstr(&Some(":12:30".to_string())));
+    }
+    #[test]
+    fn return_hour_if_mn_is_unparsable() {
+        let expect = Local::now().date().and_hms(12, 00, 0);
+        assert_eq!(Some(expect), parse_from_hmstr(&Some("12:3O".to_string())));
+        assert_eq!(Some(expect), parse_from_hmstr(&Some("12".to_string())));
+    }
+    #[test]
+    fn return_expected_date() {
+        let expect = Local::now().date().and_hms(7, 1, 0);
+        assert_eq!(Some(expect), parse_from_hmstr(&Some("07:01".to_string())));
+        assert_eq!(Some(expect), parse_from_hmstr(&Some("7:1".to_string())));
+        let expect = Local::now().date().and_hms(23, 39, 0);
+        assert_eq!(Some(expect), parse_from_hmstr(&Some("23:39".to_string())));
+    }
+}
