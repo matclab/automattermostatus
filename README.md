@@ -1,5 +1,5 @@
 # auto*mat-termo-st*atus
-Automate your mattermost custom status with the help of visible wifi SSID.
+Automate your mattermost custom status with the help of visible Wi-Fi SSID.
 Development site is hosted on [gitlab](https://gitlab.com/matclab/automattermostatus).
 
 ## Usage
@@ -33,47 +33,54 @@ FLAGS:
 
 
 OPTIONS:
-    -b, --begin <begin>                      
+    -b, --begin <begin>                        
             beginning of status update with the format hh:mm
             
             Before this time the status won't be updated [env: BEGIN=]
-        --delay <delay>                      
+        --delay <delay>                        
             delay between wifi SSID polling in seconds [env: DELAY=]
 
-    -e, --end <end>                          
+    -e, --end <end>                            
             end of status update with the format hh:mm
             
             After this time the status won't be updated [env: END=]
-        --expires-at <expires-at>            
+        --expires-at <expires-at>              
             Expiration time with the format hh:mm
             
             This parameter is used to set the custom status expiration time Set to "0" to avoid setting expiration time
             [env: EXPIRES_AT=]
-    -i, --interface-name <interface-name>    
+    -i, --interface-name <interface-name>      
             wifi interface name [env: INTERFACE_NAME=]
 
-        --mm-token <mm-token>                
+        --keyring-service <keyring-service>    
+            Service name used for mattermost private token lookup in OS keyring [env: KEYRING_SERVICE=]
+
+        --keyring-user <keyring-user>          
+            User name used for mattermost private token lookup in OS keyring [env: KEYRING_USER=]
+
+        --mm-token <mm-token>                  
             mattermost private Token
             
-            Usage of this option may leak your personal token. It is recommended to use `mm_token_cmd`. [env: MM_TOKEN]
-        --mm-token-cmd <mm-token-cmd>        
+            Usage of this option may leak your personal token. It is recommended to use `mm_token_cmd` or `keyring_user`
+            and `keyring_service`. [env: MM_TOKEN]
+        --mm-token-cmd <mm-token-cmd>          
             mattermost private Token command [env: MM_TOKEN_CMD=]
 
-    -u, --mm-url <mm-url>                    
+    -u, --mm-url <mm-url>                      
             mattermost URL [env: MM_URL=]
 
-        --state-dir <state-dir>              
+        --state-dir <state-dir>                
             directory for state file
             
             Will use content of XDG_CACHE_HOME if unset. [env: STATE_DIR=]
-    -s, --status <status>...                 
+    -s, --status <status>...                   
             Status configuration triplets (:: separated)
             
             Each triplet shall have the format: "wifi_substring::emoji_name::status_text"
 ```
 ## Configuration
 *Automattermostatus* get configuration from both a config file and a command
-line.
+line (the later override the former).
 
 ### Config File
 The config file is created if it does not exist.  It is created or read in the following places depending on your OS:
@@ -105,10 +112,21 @@ mm_url = 'https://mattermost.example.com'
 # Level of verbosity among Off, Error, Warn, Info, Debug, Trace
 verbose = 'Info'
 
-# Comand that should be executed to get mattermost private access token (the
+# mattermost private access token. It is recommended to use `mm_token_cmd` or
+# better the OS keyring with `keyring_user` and `keyring_service`.
+# mm_token= 'cieVee1Ohgeixaevo0Oiquiu'
+
+# Command that should be executed to get mattermost private access token (the
 # token shall be printed on stdout). See
 # https://docs.mattermost.com/integrations/cloud-personal-access-tokens.html#creating-a-personal-access-token.
-mm_token_cmd = "secret-tool lookup name automattermostatus"
+# It is recommended to use the OS keyring with `keyring_user` and `keyring_service`.
+# mm_token_cmd = "secret-tool lookup name automattermostatus"
+
+
+# *user* and *service* name used to query OS keyring in order to retrieve your
+# mattermost private access token.
+keyring_user = myname
+keyring_service = mattermost_token
 
 # set expiry time for custom mattermost status
 expires_at = "19:30"
@@ -136,7 +154,8 @@ token](https://docs.mattermost.com/integrations/cloud-personal-access-tokens.htm
 is available under `Account Parameters > Security > Personal Access Token`.
 You should avoid to use `mm_token` parameter as it may leak your token to
 other people having access to your computer. It is recommended to use the
-`mm_token_cmd` option. 
+`mm_token_cmd` option or better your local OS keyring with `keyring_user` and
+`keyring_service` parameters. 
 
 For example, on linux you may use `secret-tool`:
 ```sh
@@ -148,12 +167,22 @@ secret-tool lookup name automattermostatus
 or the `keyring` command:
 ```sh
 # store your token (it will ask you the token)
-keyring set automattermostatus token
-# use the following command in `mm_token_cmd` to retrieve your token:
-keyring get automattermostatus token
+keyring set mattermost_token username
 ```
+```toml
+# use the following configuration
+keyring_user = 'username'
+keyring_service = 'mattermost_token'
+```
+On Mac OS you may use
+[Keychain](https://en.wikipedia.org/wiki/Keychain_%28software%29) to store the
+mattermost access token, and it will be looked up by *automattermostatus* with
+a configuration similar to the one given here before.
 
-I'll be pleased to insert here example for Windows and Mac OS. 
+On Windows, I have no mean to test, but it looks like you may use any software
+based upon
+[Microsoft Credential Locker](https://docs.microsoft.com/en-us/windows/uwp/security/credential-locker) to store your mattermost access token.
+
 
 ## Dependencies
 On linux *automattermostatus* depends upon `NetworkManager` for getting the
@@ -165,7 +194,7 @@ You can either compile yourself, download the latest binaries from the
 install one of the available packages.
 
 ### Arch linux
-Use your favorite aur helper. for example:
+Use your favorite aur helper. For example:
 ```
 yay -S automattermostatus
 ```
@@ -199,5 +228,5 @@ You may [fork](https://gitlab.com/matclab/automattermostatus/-/forks/new) the
 project on gitlab, develop your patch or feature on a new branch and submit a
 new merge request after having push back to your forked repo.
 
-Do not hesitate to open a issue beforehand to discuss the bug fix strategy or
+Do not hesitate to open an issue beforehand to discuss the bug fix strategy or
 to ask about the feature you imagine.

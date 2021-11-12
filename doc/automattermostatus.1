@@ -6,8 +6,9 @@ automattermostatus \- manual page for automattermostatus 0.1.6
 automattermostatus 0.1.6
 Automate mattermost status with the help of wifi network
 .PP
-Use current visible wifi SSID to automate your mattermost status. This program is meant to either be running in background or be call regularly with option `\-\-delay 0`. It will then update
-your mattermost custom status according to the config file
+Use current visible wifi SSID to automate your mattermost status. This program is meant to
+either be running in background or be call regularly with option `\-\-delay 0`. It will then
+update your mattermost custom status according to the config file
 .SS "USAGE:"
 .IP
 automattermostatus [FLAGS] [OPTIONS]
@@ -54,17 +55,29 @@ After this time the status won't be updated [env: END=]
 .IP
 Expiration time with the format hh:mm
 .IP
-This parameter is used to set the custom status expiration time Set to "0" to avoid setting expiration time [env: EXPIRES_AT=]
+This parameter is used to set the custom status expiration time Set to "0" to avoid
+setting expiration time [env: EXPIRES_AT=]
 .HP
 \fB\-i\fR, \fB\-\-interface\-name\fR <interface\-name>
 .IP
 wifi interface name [env: INTERFACE_NAME=]
 .HP
+\fB\-\-keyring\-service\fR <keyring\-service>
+.IP
+Service name used for mattermost private token lookup in OS keyring [env:
+KEYRING_SERVICE=]
+.HP
+\fB\-\-keyring\-user\fR <keyring\-user>
+.IP
+User name used for mattermost private token lookup in OS keyring [env:
+KEYRING_USER=]
+.HP
 \fB\-\-mm\-token\fR <mm\-token>
 .IP
 mattermost private Token
 .IP
-Usage of this option may leak your personal token. It is recommended to use `mm_token_cmd`. [env: MM_TOKEN]
+Usage of this option may leak your personal token. It is recommended to use
+`mm_token_cmd` or `keyring_user` and `keyring_service`. [env: MM_TOKEN]
 .HP
 \fB\-\-mm\-token\-cmd\fR <mm\-token\-cmd>
 .IP

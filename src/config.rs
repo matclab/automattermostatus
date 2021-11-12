@@ -4,12 +4,14 @@ use crate::offtime::{Off, OffDays};
 use crate::utils::parse_from_hmstr;
 use ::structopt::clap::AppSettings;
 use anyhow;
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use chrono::Local;
 use directories_next::ProjectDirs;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::path::PathBuf;
+use std::process::Command;
 use structopt;
+use tracing::{debug, info, warn};
 
 /// Status that shall be send when a wifi with `wifi_string` is being seen.
 #[derive(Debug, PartialEq)]
@@ -185,10 +187,20 @@ pub struct Args {
     #[structopt(short = "u", long, env)]
     pub mm_url: Option<String>,
 
+    /// User name used for mattermost private token lookup in OS keyring.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[structopt(long, env)]
+    pub keyring_user: Option<String>,
+
+    /// Service name used for mattermost private token lookup in OS keyring.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[structopt(long, env)]
+    pub keyring_service: Option<String>,
+
     /// mattermost private Token
     ///
     /// Usage of this option may leak your personal token. It is recommended to
-    /// use `mm_token_cmd`.
+    /// use `mm_token_cmd` or `keyring_user` and `keyring_service`.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[structopt(long, env, hide_env_values = true)]
     pub mm_token: Option<String>,
@@ -260,6 +272,8 @@ impl Default for Args {
                     .cache_dir()
                     .to_owned(),
             ),
+            keyring_user: None,
+            keyring_service: None,
             mm_token: None,
             mm_token_cmd: None,
             mm_url: Some("https://mattermost.example.com".into()),
@@ -289,5 +303,46 @@ impl Off for Args {
                 } else {
                     false // now is before end, we are on duty
                 }
+    }
+}
+
+impl Args {
+    /// Update `args.mm_token` with the one fetched from OS keyring
+    pub fn update_token_with_keyring(mut self) -> Result<Self> {
+        if let Some(user) = &self.keyring_user {
+            if let Some(service) = &self.keyring_service {
+                let keyring = keyring::Keyring::new(service, user);
+                let token = keyring.get_password().with_context(|| {
+                    format!("Querying OS keyring (user: {}, service: {})", user, service)
+                })?;
+                self.mm_token = Some(token);
+            } else {
+                warn!("User is defined for keyring lookup but service is not");
+                info!("Skipping keyring lookup");
+            }
+        }
+        Ok(self)
+    }
+
+    /// Update `self.mm_token` with the standard output of
+    /// `self.mm_token_cmd` if defined.
+    pub fn update_token_with_command(mut self) -> Result<Args> {
+        if let Some(command) = &self.mm_token_cmd {
+            let params =
+                shell_words::split(command).context("Splitting mm_token_cmd into shell words")?;
+            debug!("Running command {}", command);
+            let output = Command::new(&params[0])
+                .args(&params[1..])
+                .output()
+                .context(format!("Error when running {}", &command))?;
+            let token = String::from_utf8_lossy(&output.stdout);
+            if token.len() == 0 {
+                bail!("command '{}' returns nothing", &command);
+            }
+            // /!\ Do not spit secret on stdout on released binary.
+            //debug!("setting token to {}", token);
+            self.mm_token = Some(token.to_string());
+        }
+        Ok(self)
     }
 }

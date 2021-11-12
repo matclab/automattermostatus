@@ -18,10 +18,21 @@ mm_url = 'https://mattermost.example.com'
 # Level of verbosity among Off, Error, Warn, Info, Debug, Trace
 verbose = 'Info'
 
-# Comand that should be executed to get mattermost private access token (the
+# mattermost private access token. It is recommended to use `mm_token_cmd` or
+# better the OS keyring with `keyring_user` and `keyring_service`.
+# mm_token= 'cieVee1Ohgeixaevo0Oiquiu'
+
+# Command that should be executed to get mattermost private access token (the
 # token shall be printed on stdout). See
 # https://docs.mattermost.com/integrations/cloud-personal-access-tokens.html#creating-a-personal-access-token.
-mm_token_cmd = "secret-tool lookup name automattermostatus"
+# It is recommended to use the OS keyring with `keyring_user` and `keyring_service`.
+# mm_token_cmd = "secret-tool lookup name automattermostatus"
+
+
+# *user* and *service* name used to query OS keyring in order to retrieve your
+# mattermost private access token.
+keyring_user = myname
+keyring_service = mattermost_token
 
 # set expiry time for custom mattermost status
 expires_at = "19:30"

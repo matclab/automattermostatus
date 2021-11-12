@@ -13,10 +13,9 @@ use figment::{
     Figment,
 };
 use std::path::PathBuf;
-use std::process::Command;
 use std::thread::sleep;
 use std::{collections::HashMap, fs, time};
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter};
 
@@ -56,28 +55,6 @@ pub fn get_cache(dir: Option<PathBuf>) -> Result<Cache> {
 
     state_file_name.push("automattermostatus.state");
     Ok(Cache::new(state_file_name))
-}
-
-/// Update `args.mm_token` with the standard output of
-/// `args.mm_token_cmd` if defined.
-pub fn update_token_with_command(mut args: Args) -> Result<Args> {
-    if let Some(command) = &args.mm_token_cmd {
-        let params =
-            shell_words::split(command).context("Splitting mm_token_cmd into shell words")?;
-        debug!("Running command {}", command);
-        let output = Command::new(&params[0])
-            .args(&params[1..])
-            .output()
-            .context(format!("Error when running {}", &command))?;
-        let token = String::from_utf8_lossy(&output.stdout);
-        if token.len() == 0 {
-            bail!("command '{}' returns nothing", &command);
-        }
-        // /!\ Do not spit secret on stdout on released binary.
-        //debug!("setting token to {}", token);
-        args.mm_token = Some(token.to_string());
-    }
-    Ok(args)
 }
 
 /// Prepare a dictionnary of `Status` ready to be send to mattermost
