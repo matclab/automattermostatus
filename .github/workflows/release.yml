@@ -4,9 +4,13 @@ on:
   push:
     tags:
       - 'v*'
+    branches-ignore:
+      - '**'
   create:
     tags:
       - 'v*'
+    branches-ignore:
+      - '**'
 
 jobs:
   release-allos:
