@@ -1,4 +1,8 @@
 
+# v0.1.7 : Lookup OS keyring for mattermost token
+
+Should work on all three supported OS.
+
 # v0.1.6 : Correct typo in XDG desktop file
 
 # v0.1.5 : Correct message expiry implementation
