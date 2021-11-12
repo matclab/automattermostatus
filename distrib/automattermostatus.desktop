@@ -1,5 +1,5 @@
 [Desktop Entry]
 Name=Auto mattermo status
 Terminal=false
-Exec=/usr/bin/automattermostauts
+Exec=/usr/bin/automattermostatus
 Type=Application
