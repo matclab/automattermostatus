@@ -1,4 +1,6 @@
 
+# v0.1.6 : Correct typo in XDG desktop file
+
 # v0.1.5 : Correct message expiry implementation
 
 - expiry is now computed when sending message
