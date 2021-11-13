@@ -153,3 +153,76 @@ pub fn get_wifi_and_update_status_loop(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod prepare_status_should {
+    use super::*;
+
+    #[test]
+    fn prepare_expected_status() -> Result<()> {
+        let args = Args {
+            status: vec!["a::b::c", "d::e::f", "::off::off text"]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+            mm_token: Some("AAA".to_string()),
+            ..Default::default()
+        };
+        let res = prepare_status(&args)?;
+        let token = "AAA";
+        let uri = "https://mattermost.example.com";
+        let mut expected: HashMap<state::Location, mattermost::MMStatus> = HashMap::new();
+        expected.insert(
+            Location::Known("".to_string()),
+            MMStatus::new(
+                "off text".to_string(),
+                "off".to_string(),
+                uri.to_string(),
+                token.to_string(),
+            ),
+        );
+        expected.insert(
+            Location::Known("a".to_string()),
+            MMStatus::new(
+                "c".to_string(),
+                "b".to_string(),
+                uri.to_string(),
+                token.to_string(),
+            ),
+        );
+        expected.insert(
+            Location::Known("d".to_string()),
+            MMStatus::new(
+                "f".to_string(),
+                "e".to_string(),
+                uri.to_string(),
+                token.to_string(),
+            ),
+        );
+        assert_eq!(res, expected);
+        Ok(())
+    }
+
+    #[test]
+    #[should_panic(expected = "Mattermost URL is not defined")]
+    fn panic_when_mm_url_is_none() {
+        let args = Args {
+            status: vec!["a::b::c".to_string()],
+            mm_token: Some("AAA".to_string()),
+            mm_url: None,
+            ..Default::default()
+        };
+        let _res = prepare_status(&args);
+    }
+
+    #[test]
+    #[should_panic(expected = "Mattermost private access token is not defined")]
+    fn panic_when_mm_token_is_none() {
+        let args = Args {
+            status: vec!["a::b::c".to_string()],
+            mm_token: None,
+            ..Default::default()
+        };
+        let _res = prepare_status(&args);
+    }
+}
