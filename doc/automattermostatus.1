@@ -97,7 +97,8 @@ Will use content of XDG_CACHE_HOME if unset. [env: STATE_DIR=]
 .IP
 Status configuration triplets (:: separated)
 .IP
-Each triplet shall have the format: "wifi_substring::emoji_name::status_text"
+Each triplet shall have the format: "wifi_substring::emoji_name::status_text". If
+`wifi_substring` is empty, the ssociated status will be used for off time.
 .SH "SEE ALSO"
 The full documentation for
 .B automattermostatus

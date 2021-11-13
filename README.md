@@ -76,7 +76,8 @@ OPTIONS:
     -s, --status <status>...                   
             Status configuration triplets (:: separated)
             
-            Each triplet shall have the format: "wifi_substring::emoji_name::status_text"
+            Each triplet shall have the format: "wifi_substring::emoji_name::status_text". If `wifi_substring` is empty,
+            the ssociated status will be used for off time.
 ```
 ## Configuration
 *Automattermostatus* get configuration from both a config file and a command
@@ -99,12 +100,14 @@ interface_name = 'wlp0s20f3'
 
 # Status string containing 3 fields separated by `::`
 #  - First field is the wifi substring that should be contained in a visible SSID
-#    for this status to be set
-#  - Second field is the emoji string for the custom status
-#  - Third field is the description text foir the custom status
+#    for this status to be set. If empty the associated status wil be used for
+#    off times.
+#  - Second field is the emoji string for the custom status.
+#  - Third field is the description text foir the custom status.
 #
 status = ["corporatewifi::corplogo::On premise work",
-	  "homenet::house::Working home"]
+	  "homenet::house::Working home",
+	  "::sleeping::Off time"]
 
 # Base url of the mattermost instanbce
 mm_url = 'https://mattermost.example.com'

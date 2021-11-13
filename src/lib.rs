@@ -106,7 +106,7 @@ pub fn get_wifi_and_update_status_loop(
         info!("Wifi is enabled");
     }
     loop {
-        if !&args.is_off() {
+        if !&args.is_off_time() {
             let ssids = wifi.visible_ssid().context("Getting visible SSIDs")?;
             debug!("Visible SSIDs {:#?}", ssids);
             let mut found_ssid = false;
@@ -114,6 +114,10 @@ pub fn get_wifi_and_update_status_loop(
             for (l, mmstatus) in status_dict.iter_mut() {
                 if let Location::Known(wifi_substring) = l {
                     if ssids.iter().any(|x| x.contains(wifi_substring)) {
+                        if wifi_substring.is_empty() {
+                            debug!("We do not match against empty SSID reserved for off time");
+                            break;
+                        }
                         debug!("known wifi '{}' detected", wifi_substring);
                         found_ssid = true;
                         let mmstatus = mmstatus.clone().expires_at(&args.expires_at);
@@ -128,6 +132,16 @@ pub fn get_wifi_and_update_status_loop(
                 debug!("Unknown wifi");
                 state
                     .update_status(Location::Unknown, None, &cache)
+                    .context("Updating status")?;
+            }
+        } else {
+            // Send status for Off time (the one with empty wifi_substring).
+            debug!("{:?}", status_dict);
+            let off_location = Location::Known("".to_string());
+            if let Some(offstatus) = status_dict.get_mut(&off_location) {
+                debug!("Setting state for Offtime");
+                state
+                    .update_status(off_location, Some(offstatus), &cache)
                     .context("Updating status")?;
             }
         }

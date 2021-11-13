@@ -12,7 +12,7 @@ use mockall::automock;
 /// is not working
 pub trait Off {
     /// Is the user off now ?
-    fn is_off(&self) -> bool;
+    fn is_off_time(&self) -> bool;
 }
 
 /// Struct for describing the parity of the week for which the out of work day apply
@@ -103,7 +103,7 @@ impl Off for OffDays {
     /// current day is in OffDays and either,
     /// - parity is all
     /// - parity match the current iso week number
-    fn is_off(&self) -> bool {
+    fn is_off_time(&self) -> bool {
         self.is_off_at_date(Time {})
     }
 }

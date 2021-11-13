@@ -1,7 +1,9 @@
 
-# v0.1.7 : Lookup OS keyring for mattermost token
+# v0.1.7 : use OS keyring and allow status for off time
 
-Should work on all three supported OS.
+- Lookup OS keyring for mattermost token.  Should work on all three supported OS.
+- Use empty `wifi_substring` to define a status that will be used for off
+  times.
 
 # v0.1.6 : Correct typo in XDG desktop file
 

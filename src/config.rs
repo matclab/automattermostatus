@@ -182,7 +182,8 @@ pub struct Args {
     /// Status configuration triplets (:: separated)
     ///
     /// Each triplet shall have the format:
-    /// "wifi_substring::emoji_name::status_text"
+    /// "wifi_substring::emoji_name::status_text". If `wifi_substring` is empty, the ssociated
+    /// status will be used for off time.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     #[structopt(short, long)]
     pub status: Vec<String>,
@@ -296,8 +297,8 @@ impl Default for Args {
 }
 
 impl Off for Args {
-    fn is_off(&self) -> bool {
-        self.offdays.is_off() // The day is off, so we are off
+    fn is_off_time(&self) -> bool {
+        self.offdays.is_off_time() // The day is off, so we are off
             || if let Some(begin) = parse_from_hmstr(&self.begin) {
                     Local::now() < begin // now is before begin, we are off
                 } else {
