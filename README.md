@@ -1,6 +1,10 @@
 # auto*mat-termo-st*atus
 Automate your mattermost custom status with the help of visible Wi-Fi SSID.
+
 Development site is hosted on [gitlab](https://gitlab.com/matclab/automattermostatus).
+
+Released binaries are available from [this
+page](https://gitlab.com/matclab/automattermostatus/-/releases).
 
 ## Usage
 Here after is the command line help.
