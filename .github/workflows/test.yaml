@@ -40,6 +40,8 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Deactivate rusty-hook dependencie
+        run: sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   
       - name: Test
         uses: actions-rs/cargo@v1
         with:
