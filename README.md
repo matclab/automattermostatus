@@ -128,8 +128,8 @@ verbose = 'Info'
 
 # *user* and *service* name used to query OS keyring in order to retrieve your
 # mattermost private access token.
-keyring_user = myname
-keyring_service = mattermost_token
+keyring_user = 'myname'
+keyring_service = 'mattermost_token'
 
 # set expiry time for custom mattermost status
 expires_at = "19:30"
