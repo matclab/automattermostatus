@@ -37,47 +37,47 @@ FLAGS:
 
 
 OPTIONS:
-    -b, --begin <begin>                        
+    -b, --begin <begin hh:mm>                     
             beginning of status update with the format hh:mm
             
             Before this time the status won't be updated [env: BEGIN=]
-        --delay <delay>                        
+        --state-dir <cache dir>                   
+            directory for state file
+            
+            Will use content of XDG_CACHE_HOME if unset. [env: STATE_DIR=]
+        --mm-token-cmd <command>                  
+            mattermost private Token command [env: MM_TOKEN_CMD=]
+
+        --delay <delay>                           
             delay between wifi SSID polling in seconds [env: DELAY=]
 
-    -e, --end <end>                            
+    -e, --end <end hh:mm>                         
             end of status update with the format hh:mm
             
             After this time the status won't be updated [env: END=]
-        --expires-at <expires-at>              
+        --expires-at <expiry hh:mm>               
             Expiration time with the format hh:mm
             
             This parameter is used to set the custom status expiration time Set to "0" to avoid setting expiration time
             [env: EXPIRES_AT=]
-    -i, --interface-name <interface-name>      
+    -i, --interface-name <itf_name>               
             wifi interface name [env: INTERFACE_NAME=]
 
-        --keyring-service <keyring-service>    
+        --keyring-service <service name>
             Service name used for mattermost private token lookup in OS keyring [env: KEYRING_SERVICE=]
 
-        --keyring-user <keyring-user>          
-            User name used for mattermost private token lookup in OS keyring [env: KEYRING_USER=]
-
-        --mm-token <mm-token>                  
+        --mm-token <token>                        
             mattermost private Token
             
             Usage of this option may leak your personal token. It is recommended to use `mm_token_cmd` or `keyring_user`
             and `keyring_service`. [env: MM_TOKEN]
-        --mm-token-cmd <mm-token-cmd>          
-            mattermost private Token command [env: MM_TOKEN_CMD=]
-
-    -u, --mm-url <mm-url>                      
+    -u, --mm-url <url>                            
             mattermost URL [env: MM_URL=]
 
-        --state-dir <state-dir>                
-            directory for state file
-            
-            Will use content of XDG_CACHE_HOME if unset. [env: STATE_DIR=]
-    -s, --status <status>...                   
+        --keyring-user <username>
+            User name used for mattermost private token lookup in OS keyring [env: KEYRING_USER=]
+
+    -s, --status <wifi_substr::emoji::text>...    
             Status configuration triplets (:: separated)
             
             Each triplet shall have the format: "wifi_substring::emoji_name::status_text". If `wifi_substring` is empty,

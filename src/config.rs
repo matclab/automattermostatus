@@ -30,7 +30,7 @@ pub struct WifiStatusConfig {
     pub text: String,
 }
 
-/// Implement FromStr for WifiStatusConfig which allows to call `parse` from a
+/// Implement [`FromStr`] for [`WifiStatusConfig`] which allows to call `parse` from a
 /// string representation:
 /// ```
 /// use lib::config::WifiStatusConfig;
@@ -59,7 +59,7 @@ impl std::str::FromStr for WifiStatusConfig {
 }
 
 // Courtesy of structopt_flags crate
-/// `StructOpt` implementing the verbosity parameter
+/// [`StructOpt`] implementing the verbosity parameter
 #[derive(structopt::StructOpt, Debug, Clone)]
 pub struct QuietVerbose {
     /// Increase the output's verbosity level
@@ -176,7 +176,7 @@ impl QuietVerbose {
 pub struct Args {
     /// wifi interface name
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[structopt(short, long, env)]
+    #[structopt(short, long, env, name = "itf_name")]
     pub interface_name: Option<String>,
 
     /// Status configuration triplets (:: separated)
@@ -185,22 +185,22 @@ pub struct Args {
     /// "wifi_substring::emoji_name::status_text". If `wifi_substring` is empty, the ssociated
     /// status will be used for off time.
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    #[structopt(short, long)]
+    #[structopt(short, long, name = "wifi_substr::emoji::text")]
     pub status: Vec<String>,
 
     /// mattermost URL
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[structopt(short = "u", long, env)]
+    #[structopt(short = "u", long, env, name = "url")]
     pub mm_url: Option<String>,
 
     /// User name used for mattermost private token lookup in OS keyring.
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[structopt(long, env)]
+    #[structopt(long, env, name = "username")]
     pub keyring_user: Option<String>,
 
     /// Service name used for mattermost private token lookup in OS keyring.
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[structopt(long, env)]
+    #[structopt(long, env, name = "service name")]
     pub keyring_service: Option<String>,
 
     /// mattermost private Token
@@ -208,33 +208,33 @@ pub struct Args {
     /// Usage of this option may leak your personal token. It is recommended to
     /// use `mm_token_cmd` or `keyring_user` and `keyring_service`.
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[structopt(long, env, hide_env_values = true)]
+    #[structopt(long, env, hide_env_values = true, name = "token")]
     pub mm_token: Option<String>,
 
     /// mattermost private Token command
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[structopt(long, env)]
+    #[structopt(long, env, name = "command")]
     pub mm_token_cmd: Option<String>,
 
     /// directory for state file
     ///
     /// Will use content of XDG_CACHE_HOME if unset.
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[structopt(long, env, parse(from_os_str))]
+    #[structopt(long, env, parse(from_os_str), name = "cache dir")]
     pub state_dir: Option<PathBuf>,
 
     /// beginning of status update with the format hh:mm
     ///
     /// Before this time the status won't be updated
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[structopt(short, long, env)]
+    #[structopt(short, long, env, name = "begin hh:mm")]
     pub begin: Option<String>,
 
     /// end of status update with the format hh:mm
     ///
     /// After this time the status won't be updated
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[structopt(short, long, env)]
+    #[structopt(short, long, env, name = "end hh:mm")]
     pub end: Option<String>,
 
     /// Expiration time with the format hh:mm
@@ -242,7 +242,7 @@ pub struct Args {
     /// This parameter is used to set the custom status expiration time
     /// Set to "0" to avoid setting expiration time
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[structopt(long, env)]
+    #[structopt(long, env, name = "expiry hh:mm")]
     pub expires_at: Option<String>,
 
     /// delay between wifi SSID polling in seconds

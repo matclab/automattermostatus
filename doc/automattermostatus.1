@@ -35,65 +35,65 @@ Pass many times to increase verbosity level, up to 3.
 Prints version information
 .SS "OPTIONS:"
 .HP
-\fB\-b\fR, \fB\-\-begin\fR <begin>
+\fB\-b\fR, \fB\-\-begin\fR <begin hh:mm>
 .IP
 beginning of status update with the format hh:mm
 .IP
 Before this time the status won't be updated [env: BEGIN=]
 .HP
+\fB\-\-state\-dir\fR <cache dir>
+.IP
+directory for state file
+.IP
+Will use content of XDG_CACHE_HOME if unset. [env: STATE_DIR=]
+.HP
+\fB\-\-mm\-token\-cmd\fR <command>
+.IP
+mattermost private Token command [env: MM_TOKEN_CMD=]
+.HP
 \fB\-\-delay\fR <delay>
 .IP
 delay between wifi SSID polling in seconds [env: DELAY=]
 .HP
-\fB\-e\fR, \fB\-\-end\fR <end>
+\fB\-e\fR, \fB\-\-end\fR <end hh:mm>
 .IP
 end of status update with the format hh:mm
 .IP
 After this time the status won't be updated [env: END=]
 .HP
-\fB\-\-expires\-at\fR <expires\-at>
+\fB\-\-expires\-at\fR <expiry hh:mm>
 .IP
 Expiration time with the format hh:mm
 .IP
 This parameter is used to set the custom status expiration time Set to "0" to avoid
 setting expiration time [env: EXPIRES_AT=]
 .HP
-\fB\-i\fR, \fB\-\-interface\-name\fR <interface\-name>
+\fB\-i\fR, \fB\-\-interface\-name\fR <itf_name>
 .IP
 wifi interface name [env: INTERFACE_NAME=]
 .HP
-\fB\-\-keyring\-service\fR <keyring\-service>
+\fB\-\-keyring\-service\fR <service name>
 .IP
 Service name used for mattermost private token lookup in OS keyring [env:
 KEYRING_SERVICE=]
 .HP
-\fB\-\-keyring\-user\fR <keyring\-user>
-.IP
-User name used for mattermost private token lookup in OS keyring [env:
-KEYRING_USER=]
-.HP
-\fB\-\-mm\-token\fR <mm\-token>
+\fB\-\-mm\-token\fR <token>
 .IP
 mattermost private Token
 .IP
 Usage of this option may leak your personal token. It is recommended to use
 `mm_token_cmd` or `keyring_user` and `keyring_service`. [env: MM_TOKEN]
 .HP
-\fB\-\-mm\-token\-cmd\fR <mm\-token\-cmd>
-.IP
-mattermost private Token command [env: MM_TOKEN_CMD=]
-.HP
-\fB\-u\fR, \fB\-\-mm\-url\fR <mm\-url>
+\fB\-u\fR, \fB\-\-mm\-url\fR <url>
 .IP
 mattermost URL [env: MM_URL=]
 .HP
-\fB\-\-state\-dir\fR <state\-dir>
+\fB\-\-keyring\-user\fR <username>
 .IP
-directory for state file
-.IP
-Will use content of XDG_CACHE_HOME if unset. [env: STATE_DIR=]
+User name used for mattermost private token lookup in OS keyring [env:
+KEYRING_USER=]
 .HP
-\fB\-s\fR, \fB\-\-status\fR <status>...
+\fB\-s\fR, \fB\-\-status\fR <wifi_substr::emoji::text>...
 .IP
 Status configuration triplets (:: separated)
 .IP

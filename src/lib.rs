@@ -1,10 +1,11 @@
 #![warn(missing_docs)]
 //! Automattermostatus main components and helper functions:
-//! - `config`: allow to configure the application from file and command line,
-//! - `mattermost`:  updating custom status on a mattermost instance,
-//! - `state`: persistent application state (essentially the location),
-//! - `wifiscan`: wifi scanning for linux, macos and windows
-//! - `offtime`: management of time when no custom status shall be send
+//! - [`config`]: allow to configure the application from file and command line,
+//! - [`mattermost`]:  updating custom status on a mattermost instance,
+//! - [`state`]: persistent application state (essentially the location),
+//! - [`wifiscan`]: wifi scanning for linux, macos and windows
+//! - [`offtime`]: management of time when no custom status shall be send
+//! - [`utils`]: some simple helper functions to parse time string
 //!
 use anyhow::{bail, Context, Result};
 use std::path::PathBuf;
@@ -39,7 +40,7 @@ pub fn setup_tracing(args: &Args) -> Result<()> {
     Ok(())
 }
 
-/// Return a `Cache` used to persist state.
+/// Return a [`Cache`] used to persist state.
 pub fn get_cache(dir: Option<PathBuf>) -> Result<Cache> {
     let mut state_file_name: PathBuf;
     if let Some(ref state_dir) = dir {
@@ -52,7 +53,7 @@ pub fn get_cache(dir: Option<PathBuf>) -> Result<Cache> {
     Ok(Cache::new(state_file_name))
 }
 
-/// Prepare a dictionnary of `Status` ready to be send to mattermost
+/// Prepare a dictionnary of [`Status`] ready to be send to mattermost
 /// server depending upon the location being found.
 pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
     let mut res = HashMap::new();
@@ -136,7 +137,6 @@ pub fn get_wifi_and_update_status_loop(
             }
         } else {
             // Send status for Off time (the one with empty wifi_substring).
-            debug!("{:?}", status_dict);
             let off_location = Location::Known("".to_string());
             if let Some(offstatus) = status_dict.get_mut(&off_location) {
                 debug!("Setting state for Offtime");

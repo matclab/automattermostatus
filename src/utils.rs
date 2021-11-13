@@ -2,7 +2,7 @@
 use chrono::{DateTime, Local};
 use tracing::warn;
 
-/// Parse a stringwith the expected format "hh:mm" and return a [DateTime<Local>]
+/// Parse a string with the expected format "hh:mm" and return a [`DateTime<Local>`]
 /// for the current day at time "hh:mm"
 ///
 /// If `mm` is not parsable we return a datetime set at `hh:00`.
