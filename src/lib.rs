@@ -7,14 +7,9 @@
 //! - `offtime`: management of time when no custom status shall be send
 //!
 use anyhow::{bail, Context, Result};
-use directories_next::ProjectDirs;
-use figment::{
-    providers::{Format, Serialized, Toml},
-    Figment,
-};
 use std::path::PathBuf;
 use std::thread::sleep;
-use std::{collections::HashMap, fs, time};
+use std::{collections::HashMap, time};
 use tracing::{debug, info, warn};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter};
@@ -82,35 +77,6 @@ pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
             ),
         );
     }
-    Ok(res)
-}
-
-/// Merge with precedence default [`Args`], config file and command line parameters.
-pub fn merge_config_and_params(args: &Args) -> Result<Args> {
-    let default_args = Args::default();
-    debug!("default Args : {:#?}", default_args);
-    let conf_dir = ProjectDirs::from("net", "clabaut", "automattermostatus")
-        .expect("Unable to find a project dir")
-        .config_dir()
-        .to_owned();
-    fs::create_dir_all(&conf_dir).with_context(|| format!("Creating conf dir {:?}", &conf_dir))?;
-    let conf_file = conf_dir.join("automattermostatus.toml");
-    if !conf_file.exists() {
-        info!("Write {:?} default config file", &conf_file);
-        fs::write(&conf_file, toml::to_string(&Args::default())?)
-            .unwrap_or_else(|_| panic!("Unable to write default config file {:?}", conf_file));
-    }
-
-    let config_args: Args = Figment::from(Toml::file(&conf_file)).extract()?;
-    debug!("config Args : {:#?}", config_args);
-    debug!("parameter Args : {:#?}", args);
-    // Merge config Default → Config File → command line args
-    let res = Figment::from(Serialized::defaults(Args::default()))
-        .merge(Toml::file(&conf_file))
-        .merge(Serialized::defaults(args))
-        .extract()
-        .context("Merging configuration file and parameters")?;
-    debug!("Merged config and parameters : {:#?}", res);
     Ok(res)
 }
 

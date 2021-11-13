@@ -8,7 +8,8 @@ use anyhow::{Context, Result};
 #[paw::main]
 fn main(args: Args) -> Result<()> {
     setup_tracing(&args).context("Setting up tracing")?;
-    let args = merge_config_and_params(&args)?
+    let args = args
+        .merge_config_and_params()?
         // Retrieve token if possible
         .update_token_with_command()
         .context("Get private token from mm_token_cmd")?
