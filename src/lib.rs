@@ -54,9 +54,6 @@ pub fn get_cache(dir: Option<PathBuf>) -> Result<Cache> {
 
 /// Prepare a dictionnary of `Status` ready to be send to mattermost
 /// server depending upon the location being found.
-///
-/// TODO: should be done when used, because of expires_at field which is set or no depending upon
-/// current time
 pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
     let mut res = HashMap::new();
     for s in &args.status {
