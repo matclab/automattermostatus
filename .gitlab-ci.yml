@@ -131,6 +131,14 @@ test-linux-beta:
       paths:
         - target/release/automattermostatus.exe
 
+code-coverage:
+  image: xd009642/tarpaulin:develop-nightly
+  script:
+    - cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --coveralls $COVERALLS_TOKEN 
+  coverage: '/\d+.\d+% coverage, \d+\/\d+ lines covered/'
+  interruptible: true
+
+
 
 .upload: # done on github for now
   stage: release
