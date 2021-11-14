@@ -155,6 +155,24 @@ pub fn get_wifi_and_update_status_loop(
 }
 
 #[cfg(test)]
+mod get_cache_should {
+    use super::*;
+    use anyhow::anyhow;
+
+    #[test]
+    //#[should_panic(expected = "Internal error, no `state_dir` configured")]
+    fn panic_when_called_with_none() -> Result<()> {
+        match get_cache(None) {
+            Ok(_) => Err(anyhow!("Expected an error")),
+            Err(e) => {
+                assert_eq!(e.to_string(), "Internal Error, no `state_dir` configured");
+                Ok(())
+            }
+        }
+    }
+}
+
+#[cfg(test)]
 mod prepare_status_should {
     use super::*;
 
@@ -224,5 +242,21 @@ mod prepare_status_should {
             ..Default::default()
         };
         let _res = prepare_status(&args);
+    }
+}
+
+#[cfg(test)]
+mod main_loop_should {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "Internal error: args.delay shouldn't be None")]
+    fn panic_when_args_delay_is_none() {
+        let args = Args {
+            status: vec!["a::b::c".to_string()],
+            delay: None,
+            ..Default::default()
+        };
+        let _res = get_wifi_and_update_status_loop(args, HashMap::new());
     }
 }
