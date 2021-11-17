@@ -1,0 +1,11 @@
+[Unit]
+Description=automattermostatus daemon
+
+[Service]
+ExecStart=/usr/bin/automattermostatus -v
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
+
