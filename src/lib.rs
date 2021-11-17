@@ -21,8 +21,8 @@ pub mod offtime;
 pub mod state;
 pub mod utils;
 pub mod wifiscan;
-pub use config::{Args, WifiStatusConfig};
-pub use mattermost::MMStatus;
+pub use config::{Args, SecretType, WifiStatusConfig};
+pub use mattermost::{BaseSession, MMStatus, Session};
 use offtime::Off;
 pub use state::{Cache, Location, State};
 pub use wifiscan::{WiFi, WifiInterface};
@@ -62,20 +62,29 @@ pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
         debug!("Adding : {:?}", sc);
         res.insert(
             Location::Known(sc.wifi_string),
-            MMStatus::new(
-                sc.text,
-                sc.emoji,
-                args.mm_url
-                    .as_ref()
-                    .expect("Mattermost URL is not defined")
-                    .clone(),
-                args.mm_token
-                    .clone()
-                    .expect("Mattermost private access token is not defined"),
-            ),
+            MMStatus::new(sc.text, sc.emoji),
         );
     }
     Ok(res)
+}
+
+/// Create [Session] according to `args.secret_type`.
+pub fn create_session(args: &Args) -> Result<Box<dyn BaseSession>> {
+    args.mm_url.as_ref().expect("Mattermost URL is not defined");
+    args.secret_type
+        .as_ref()
+        .expect("Internal Error: secret_type is not defined");
+    args.mm_secret.as_ref().expect("Secret is not defined");
+    let mut session = Session::new(args.mm_url.as_ref().unwrap());
+    let mut session: Box<dyn BaseSession> = match args.secret_type.as_ref().unwrap() {
+        SecretType::Password => Box::new(session.with_credentials(
+            args.mm_user.as_ref().unwrap(),
+            args.mm_secret.as_ref().unwrap(),
+        )),
+        SecretType::Token => Box::new(session.with_token(args.mm_secret.as_ref().unwrap())),
+    };
+    session.login()?;
+    Ok(session)
 }
 
 /// Main application loop, looking for a known SSID and updating
@@ -106,6 +115,7 @@ pub fn get_wifi_and_update_status_loop(
     } else {
         info!("Wifi is enabled");
     }
+    let mut session = create_session(&args)?;
     loop {
         if !&args.is_off_time() {
             let ssids = wifi.visible_ssid().context("Getting visible SSIDs")?;
@@ -121,9 +131,9 @@ pub fn get_wifi_and_update_status_loop(
                         }
                         debug!("known wifi '{}' detected", wifi_substring);
                         found_ssid = true;
-                        let mmstatus = mmstatus.clone().expires_at(&args.expires_at);
+                        mmstatus.expires_at(&args.expires_at);
                         state
-                            .update_status(l.clone(), Some(&mmstatus), &cache)
+                            .update_status(l.clone(), Some(mmstatus), &mut session, &cache)
                             .context("Updating status")?;
                         break;
                     }
@@ -132,7 +142,7 @@ pub fn get_wifi_and_update_status_loop(
             if !found_ssid {
                 debug!("Unknown wifi");
                 state
-                    .update_status(Location::Unknown, None, &cache)
+                    .update_status(Location::Unknown, None, &mut session, &cache)
                     .context("Updating status")?;
             }
         } else {
@@ -141,7 +151,7 @@ pub fn get_wifi_and_update_status_loop(
             if let Some(offstatus) = status_dict.get_mut(&off_location) {
                 debug!("Setting state for Offtime");
                 state
-                    .update_status(off_location, Some(offstatus), &cache)
+                    .update_status(off_location, Some(offstatus), &mut session, &cache)
                     .context("Updating status")?;
             }
         }
@@ -183,65 +193,41 @@ mod prepare_status_should {
                 .iter()
                 .map(|s| s.to_string())
                 .collect(),
-            mm_token: Some("AAA".to_string()),
+            mm_secret: Some("AAA".to_string()),
             ..Default::default()
         };
         let res = prepare_status(&args)?;
-        let token = "AAA";
-        let uri = "https://mattermost.example.com";
         let mut expected: HashMap<state::Location, mattermost::MMStatus> = HashMap::new();
         expected.insert(
             Location::Known("".to_string()),
-            MMStatus::new(
-                "off text".to_string(),
-                "off".to_string(),
-                uri.to_string(),
-                token.to_string(),
-            ),
+            MMStatus::new("off text".to_string(), "off".to_string()),
         );
         expected.insert(
             Location::Known("a".to_string()),
-            MMStatus::new(
-                "c".to_string(),
-                "b".to_string(),
-                uri.to_string(),
-                token.to_string(),
-            ),
+            MMStatus::new("c".to_string(), "b".to_string()),
         );
         expected.insert(
             Location::Known("d".to_string()),
-            MMStatus::new(
-                "f".to_string(),
-                "e".to_string(),
-                uri.to_string(),
-                token.to_string(),
-            ),
+            MMStatus::new("f".to_string(), "e".to_string()),
         );
         assert_eq!(res, expected);
         Ok(())
     }
+}
 
+#[cfg(test)]
+mod create_session_should {
+    use super::*;
     #[test]
     #[should_panic(expected = "Mattermost URL is not defined")]
     fn panic_when_mm_url_is_none() {
         let args = Args {
             status: vec!["a::b::c".to_string()],
-            mm_token: Some("AAA".to_string()),
+            mm_secret: Some("AAA".to_string()),
             mm_url: None,
             ..Default::default()
         };
-        let _res = prepare_status(&args);
-    }
-
-    #[test]
-    #[should_panic(expected = "Mattermost private access token is not defined")]
-    fn panic_when_mm_token_is_none() {
-        let args = Args {
-            status: vec!["a::b::c".to_string()],
-            mm_token: None,
-            ..Default::default()
-        };
-        let _res = prepare_status(&args);
+        let _res = create_session(&args);
     }
 }
 

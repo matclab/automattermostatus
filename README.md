@@ -45,9 +45,11 @@ OPTIONS:
             directory for state file
             
             Will use content of XDG_CACHE_HOME if unset. [env: STATE_DIR=]
-        --mm-token-cmd <command>                  
-            mattermost private Token command [env: MM_TOKEN_CMD=]
-
+        --mm-secret-cmd <command>                 
+            mattermost secret command
+            
+            The secret is either a `password` (default) or a`token` according to `secret_type` option [env:
+            MM_SECRET_CMD=]
         --delay <delay>                           
             delay between wifi SSID polling in seconds [env: DELAY=]
 
@@ -63,19 +65,26 @@ OPTIONS:
     -i, --interface-name <itf_name>               
             wifi interface name [env: INTERFACE_NAME=]
 
-        --keyring-service <service name>
-            Service name used for mattermost private token lookup in OS keyring [env: KEYRING_SERVICE=]
-
-        --mm-token <token>                        
+    -t, --secret-type <secret-type>
+            Type of secret. Either `Password` (default) or `Token` [env: SECRET_TYPE=]  [possible values: Token,
+            Password]
+        --mm-secret <token>                       
             mattermost private Token
             
-            Usage of this option may leak your personal token. It is recommended to use `mm_token_cmd` or `keyring_user`
-            and `keyring_service`. [env: MM_TOKEN]
+            Usage of this option may leak your personal token. It is recommended to use `mm_token_cmd` or
+            `keyring_service`.
+            
+            The secret is either a `password` (default) or a`token` according to `secret_type` option [env: MM_SECRET]
+        --keyring-service <token service name>
+            Service name used for mattermost secret lookup in OS keyring.
+            
+            The secret is either a `password` (default) or a`token` according to `secret_type` option [env:
+            KEYRING_SERVICE=]
     -u, --mm-url <url>                            
             mattermost URL [env: MM_URL=]
 
-        --keyring-user <username>
-            User name used for mattermost private token lookup in OS keyring [env: KEYRING_USER=]
+        --mm-user <username>
+            User name used for mattermost login or for password or private token lookup in OS keyring [env: MM_USER=]
 
     -s, --status <wifi_substr::emoji::text>...    
             Status configuration triplets (:: separated)

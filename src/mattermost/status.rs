@@ -1,7 +1,9 @@
 //! Module responsible for sending custom status change to mattermost.
+use crate::mattermost::BaseSession;
 use crate::utils::parse_from_hmstr;
 use anyhow::Result;
 use chrono::{DateTime, Local};
+use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use serde_json as json;
 use std::fmt;
@@ -16,11 +18,14 @@ pub enum MMSError {
     BadJSONData(#[from] serde_json::error::Error),
     #[error("HTTP request error")]
     HTTPRequestError(#[from] ureq::Error),
+    #[error("Mattermost login error")]
+    LoginError(#[from] anyhow::Error),
 }
 
 /// Custom struct to serialize the HTTP POST data into a json objecting using serde_json
 /// For a description of these fields see the [MatterMost OpenApi sources](https://github.com/mattermost/mattermost-api-reference/blob/master/v4/source/status.yaml)
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Derivative, Serialize, Deserialize, Clone, PartialEq, Eq, Default)]
+#[derivative(Debug)]
 pub struct MMStatus {
     /// custom status text description
     pub text: String,
@@ -32,12 +37,6 @@ pub struct MMStatus {
     /// custom status expiration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expires_at: Option<DateTime<Local>>,
-    /// base URL of the mattermost server like https://mattermost.example.com
-    #[serde(skip_serializing)]
-    base_uri: String,
-    /// private access token for current user on the `base_uri` mattermost instance
-    #[serde(skip_serializing)]
-    token: String,
 }
 
 impl fmt::Display for MMStatus {
@@ -53,19 +52,16 @@ impl fmt::Display for MMStatus {
 impl MMStatus {
     /// Create a `MMStatus` ready to be sent to the `mm_base_uri` mattermost instance.
     /// Authentication is done with the private access `token`.
-    pub fn new(text: String, emoji: String, mm_base_uri: String, token: String) -> MMStatus {
-        let uri = mm_base_uri + "/api/v4/users/me/status/custom";
+    pub fn new(text: String, emoji: String) -> MMStatus {
         MMStatus {
             text,
             emoji,
             duration: None,
             expires_at: None,
-            base_uri: uri,
-            token,
         }
     }
     /// Add expiration time with the format "hh:mm" to the mattermost custom status
-    pub fn expires_at(mut self, time_str: &Option<String>) -> Self {
+    pub fn expires_at(&mut self, time_str: &Option<String>) {
         // do not set expiry time if set in the past
         if let Some(expiry) = parse_from_hmstr(time_str) {
             if Local::now() < expiry {
@@ -76,38 +72,60 @@ impl MMStatus {
             }
         }
         // let dt: NaiveDateTime = NaiveDate::from_ymd(2016, 7, 8).and_hms(9, 10, 11);
-        self
     }
     /// This function is essentially used for debugging or testing
     pub fn to_json(&self) -> Result<String, MMSError> {
         json::to_string(&self).map_err(MMSError::BadJSONData)
     }
 
-    /// Send the new custom status
-    pub fn send(&self) -> Result<u16, MMSError> {
+    /// Send self custom status once
+    #[allow(clippy::borrowed_box)] // Box needed beacause we can get two different types.
+    pub fn _send(&self, session: &Box<dyn BaseSession>) -> Result<ureq::Response, ureq::Error> {
+        let token = session
+            .token()
+            .expect("Internal Error: token is unset in current session");
+        let uri = session.base_uri().to_owned() + "/api/v4/users/me/status/custom";
+        ureq::put(&uri)
+            .set("Authorization", &("Bearer ".to_owned() + token))
+            .send_json(serde_json::to_value(&self).unwrap_or_else(|e| {
+                panic!(
+                    "Serialization of MMStatus '{:?}' failed with {:?}",
+                    &self, &e
+                )
+            }))
+    }
+    /// Send self custom status, trying to login once in case of 401 failure.
+    pub fn send(&mut self, session: &mut Box<dyn BaseSession>) -> Result<ureq::Response, MMSError> {
         debug!("Post status: {}", self.to_owned().to_json()?);
-        let response = ureq::put(&self.base_uri)
-            .set("Authorization", &("Bearer ".to_owned() + &self.token))
-            .send_json(serde_json::to_value(&self)?)
-            .map_err(MMSError::HTTPRequestError)?;
-        Ok(response.status())
+        match self._send(session) {
+            Ok(response) => Ok(response),
+            Err(ureq::Error::Status(code, response)) => {
+                /* the server returned an unexpected status
+                code (such as 400, 500 etc) */
+                if code == 401 {
+                    // relogin and retry
+                    session.login().map_err(MMSError::LoginError)?;
+                    self._send(session)
+                } else {
+                    Err(ureq::Error::Status(code, response))
+                }
+            }
+            Err(e) => Err(e),
+        }
+        .map_err(MMSError::HTTPRequestError)
     }
 }
 
 #[cfg(test)]
-mod should {
+mod send_should {
     use super::*;
+    use crate::mattermost::{BaseSession, Session};
     use httpmock::prelude::*;
     #[test]
-    fn send_required_json_for_mmstatus() -> Result<()> {
+    fn send_required_json() -> Result<()> {
         // Start a lightweight mock server.
         let server = MockServer::start();
-        let mmstatus = MMStatus::new(
-            "text".to_string(),
-            "emoji".to_string(),
-            server.url(""),
-            "token".to_string(),
-        );
+        let mut mmstatus = MMStatus::new("text".into(), "emoji".into());
 
         // Create a mock on the server.
         let server_mock = server.mock(|expect, resp_with| {
@@ -124,12 +142,14 @@ mod should {
         });
 
         // Send an HTTP request to the mock server. This simulates your code.
-        let status = mmstatus.send()?;
+        let mut session: Box<dyn BaseSession> =
+            Box::new(Session::new(&server.url("")).with_token("token"));
+        let resp = mmstatus.send(&mut session)?;
 
         // Ensure the specified mock was called exactly one time (or fail with a detailed error description).
         server_mock.assert();
         // Ensure the mock server did respond as specified.
-        assert_eq!(status, 200);
+        assert_eq!(resp.status(), 200);
         Ok(())
     }
 }

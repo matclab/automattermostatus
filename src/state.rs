@@ -4,7 +4,7 @@ use chrono::Utc;
 use std::fs;
 use tracing::{debug, info};
 
-use crate::mattermost::MMStatus;
+use crate::mattermost::{BaseSession, MMStatus};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -85,7 +85,8 @@ impl State {
     pub fn update_status(
         &mut self,
         current_location: Location,
-        status: Option<&MMStatus>,
+        status: Option<&mut MMStatus>,
+        session: &mut Box<dyn BaseSession>,
         cache: &Cache,
     ) -> Result<()> {
         if current_location == Location::Unknown {
@@ -103,7 +104,7 @@ impl State {
         }
         self.set_location(current_location, cache)?;
         // We update the status on MM
-        status.unwrap().send()?;
+        status.unwrap().send(session)?;
         Ok(())
     }
 }

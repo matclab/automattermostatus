@@ -1,9 +1,9 @@
+#![allow(missing_docs)]
 //! This module holds struct and helpers for parameters and configuration
 //!
 use crate::offtime::{Off, OffDays};
 use crate::utils::parse_from_hmstr;
 use ::structopt::clap::AppSettings;
-use anyhow;
 use anyhow::{bail, Context, Result};
 use chrono::Local;
 use directories_next::ProjectDirs;
@@ -16,7 +16,21 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 use structopt;
+use structopt::clap::arg_enum;
 use tracing::{debug, info, warn};
+
+arg_enum! {
+/// Enum used to encode `secret_type` parameter (password or token)
+///
+/// When set to [Password], the secret is used to obtain a session token
+/// by using the login API. When set to [Token], the secret is a private access
+/// token directly usable to access API.
+#[derive(Serialize, Deserialize,Debug)]
+pub enum SecretType {
+    Token,
+    Password,
+}
+}
 
 /// Status that shall be send when a wifi with `wifi_string` is being seen.
 #[derive(Debug, PartialEq)]
@@ -193,28 +207,42 @@ pub struct Args {
     #[structopt(short = "u", long, env, name = "url")]
     pub mm_url: Option<String>,
 
-    /// User name used for mattermost private token lookup in OS keyring.
+    /// User name used for mattermost login or for password or private token lookup in OS keyring.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[structopt(long, env, name = "username")]
-    pub keyring_user: Option<String>,
+    pub mm_user: Option<String>,
 
-    /// Service name used for mattermost private token lookup in OS keyring.
+    /// Type of secret. Either `Password` (default) or `Token`
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[structopt(long, env, name = "service name")]
+    #[structopt(short = "t", long, env, possible_values = &SecretType::variants(), case_insensitive = true)]
+    pub secret_type: Option<SecretType>,
+
+    /// Service name used for mattermost secret lookup in OS keyring.
+    ///
+    /// The secret is either a `password` (default) or a`token` according to
+    /// `secret_type` option
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[structopt(long, env, name = "token service name")]
     pub keyring_service: Option<String>,
 
     /// mattermost private Token
     ///
     /// Usage of this option may leak your personal token. It is recommended to
-    /// use `mm_token_cmd` or `keyring_user` and `keyring_service`.
+    /// use `mm_token_cmd` or `keyring_service`.
+    ///
+    /// The secret is either a `password` (default) or a`token` according to
+    /// `secret_type` option
     #[serde(skip_serializing_if = "Option::is_none")]
     #[structopt(long, env, hide_env_values = true, name = "token")]
-    pub mm_token: Option<String>,
+    pub mm_secret: Option<String>,
 
-    /// mattermost private Token command
+    /// mattermost secret command
+    ///
+    /// The secret is either a `password` (default) or a`token` according to
+    /// `secret_type` option
     #[serde(skip_serializing_if = "Option::is_none")]
     #[structopt(long, env, name = "command")]
-    pub mm_token_cmd: Option<String>,
+    pub mm_secret_cmd: Option<String>,
 
     /// directory for state file
     ///
@@ -256,7 +284,6 @@ pub struct Args {
     pub verbose: QuietVerbose,
 
     #[structopt(skip)]
-    //#[serde(skip_serializing_if = "OffDays::is_empty")]
     /// Days off for which the custom status shall not be changed
     pub offdays: OffDays,
 }
@@ -278,10 +305,11 @@ impl Default for Args {
                     .cache_dir()
                     .to_owned(),
             ),
-            keyring_user: None,
+            mm_user: None,
             keyring_service: None,
-            mm_token: None,
-            mm_token_cmd: None,
+            mm_secret: None,
+            mm_secret_cmd: None,
+            secret_type: Some(SecretType::Password),
             mm_url: Some("https://mattermost.example.com".into()),
             verbose: QuietVerbose {
                 verbosity_level: 1,
@@ -313,15 +341,18 @@ impl Off for Args {
 }
 
 impl Args {
-    /// Update `args.mm_token` with the one fetched from OS keyring
-    pub fn update_token_with_keyring(mut self) -> Result<Self> {
-        if let Some(user) = &self.keyring_user {
+    /// Update `args.mm_secret` and `args.token` with the one fetched from OS keyring
+    ///
+    /// If the secret is a password, [token] will be updated later when login to the mattermost
+    /// server
+    pub fn update_secret_with_keyring(mut self) -> Result<Self> {
+        if let Some(user) = &self.mm_user {
             if let Some(service) = &self.keyring_service {
                 let keyring = keyring::Keyring::new(service, user);
-                let token = keyring.get_password().with_context(|| {
+                let secret = keyring.get_password().with_context(|| {
                     format!("Querying OS keyring (user: {}, service: {})", user, service)
                 })?;
-                self.mm_token = Some(token);
+                self.mm_secret = Some(secret);
             } else {
                 warn!("User is defined for keyring lookup but service is not");
                 info!("Skipping keyring lookup");
@@ -330,10 +361,13 @@ impl Args {
         Ok(self)
     }
 
-    /// Update `self.mm_token` with the standard output of
-    /// `self.mm_token_cmd` if defined.
-    pub fn update_token_with_command(mut self) -> Result<Args> {
-        if let Some(command) = &self.mm_token_cmd {
+    /// Update [self.mm_secret] and [self.token] with the standard output of
+    /// [self.mm_secret_cmd] if defined.
+    ///
+    /// If the secret is a password, [token] will be updated later when login to the mattermost
+    /// server
+    pub fn update_secret_with_command(mut self) -> Result<Args> {
+        if let Some(command) = &self.mm_secret_cmd {
             let params =
                 shell_words::split(command).context("Splitting mm_token_cmd into shell words")?;
             debug!("Running command {}", command);
@@ -341,16 +375,17 @@ impl Args {
                 .args(&params[1..])
                 .output()
                 .context(format!("Error when running {}", &command))?;
-            let token = String::from_utf8_lossy(&output.stdout);
-            if token.len() == 0 {
+            let secret = String::from_utf8_lossy(&output.stdout);
+            if secret.len() == 0 {
                 bail!("command '{}' returns nothing", &command);
             }
             // /!\ Do not spit secret on stdout on released binary.
-            //debug!("setting token to {}", token);
-            self.mm_token = Some(token.to_string());
+            //debug!("setting secret to {}", secret);
+            self.mm_secret = Some(secret.to_string());
         }
         Ok(self)
     }
+
     /// Merge with precedence default [`Args`], config file and command line parameters.
     pub fn merge_config_and_params(&self) -> Result<Args> {
         let default_args = Args::default();

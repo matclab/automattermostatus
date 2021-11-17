@@ -272,6 +272,7 @@ version = "0.1.7"
 dependencies = [
  "anyhow",
  "chrono",
+ "derivative",
  "directories-next",
  "figment",
  "httpmock",

@@ -47,9 +47,12 @@ directory for state file
 .IP
 Will use content of XDG_CACHE_HOME if unset. [env: STATE_DIR=]
 .HP
-\fB\-\-mm\-token\-cmd\fR <command>
+\fB\-\-mm\-secret\-cmd\fR <command>
 .IP
-mattermost private Token command [env: MM_TOKEN_CMD=]
+mattermost secret command
+.IP
+The secret is either a `password` (default) or a`token` according to `secret_type`
+option [env: MM_SECRET_CMD=]
 .HP
 \fB\-\-delay\fR <delay>
 .IP
@@ -72,26 +75,36 @@ setting expiration time [env: EXPIRES_AT=]
 .IP
 wifi interface name [env: INTERFACE_NAME=]
 .HP
-\fB\-\-keyring\-service\fR <service name>
+\fB\-t\fR, \fB\-\-secret\-type\fR <secret\-type>
 .IP
-Service name used for mattermost private token lookup in OS keyring [env:
-KEYRING_SERVICE=]
+Type of secret. Either `Password` (default) or `Token` [env: SECRET_TYPE=]
+[possible values: Token, Password]
 .HP
-\fB\-\-mm\-token\fR <token>
+\fB\-\-mm\-secret\fR <token>
 .IP
 mattermost private Token
 .IP
 Usage of this option may leak your personal token. It is recommended to use
-`mm_token_cmd` or `keyring_user` and `keyring_service`. [env: MM_TOKEN]
+`mm_token_cmd` or `keyring_service`.
+.IP
+The secret is either a `password` (default) or a`token` according to `secret_type`
+option [env: MM_SECRET]
+.HP
+\fB\-\-keyring\-service\fR <token service name>
+.IP
+Service name used for mattermost secret lookup in OS keyring.
+.IP
+The secret is either a `password` (default) or a`token` according to `secret_type`
+option [env: KEYRING_SERVICE=]
 .HP
 \fB\-u\fR, \fB\-\-mm\-url\fR <url>
 .IP
 mattermost URL [env: MM_URL=]
 .HP
-\fB\-\-keyring\-user\fR <username>
+\fB\-\-mm\-user\fR <username>
 .IP
-User name used for mattermost private token lookup in OS keyring [env:
-KEYRING_USER=]
+User name used for mattermost login or for password or private token lookup in OS
+keyring [env: MM_USER=]
 .HP
 \fB\-s\fR, \fB\-\-status\fR <wifi_substr::emoji::text>...
 .IP
