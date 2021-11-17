@@ -248,7 +248,7 @@ pub struct Args {
     /// delay between wifi SSID polling in seconds
     #[serde(skip_serializing_if = "Option::is_none")]
     #[structopt(long, env)]
-    pub delay: Option<u8>,
+    pub delay: Option<u32>,
 
     #[allow(missing_docs)]
     #[structopt(flatten)]
