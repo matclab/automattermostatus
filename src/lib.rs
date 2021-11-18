@@ -117,7 +117,7 @@ pub fn get_wifi_and_update_status_loop(
                     if ssids.iter().any(|x| x.contains(wifi_substring)) {
                         if wifi_substring.is_empty() {
                             debug!("We do not match against empty SSID reserved for off time");
-                            break;
+                            continue;
                         }
                         debug!("known wifi '{}' detected", wifi_substring);
                         found_ssid = true;
