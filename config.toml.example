@@ -20,21 +20,28 @@ mm_url = 'https://mattermost.example.com'
 # Level of verbosity among Off, Error, Warn, Info, Debug, Trace
 verbose = 'Info'
 
-# mattermost private access token. It is recommended to use `mm_token_cmd` or
+# The type of the secret given by `mm_secret`, `mm_secret_cmd` or `kering_*`
+# parameters. Either:
+# secret_type = "Token" # for using a private acces token
+# secret_type = "Password" # for using login and password credentials where
+# the login is given by `mm_user`
+secret_type = "Token"
+
+# mattermost authentication secret. It is recommended to use `mm_secret_cmd` or
 # better the OS keyring with `keyring_user` and `keyring_service`.
-# mm_token= 'cieVee1Ohgeixaevo0Oiquiu'
+# mm_secret= 'cieVee1Ohgeixaevo0Oiquiu'
 
-# Command that should be executed to get mattermost private access token (the
-# token shall be printed on stdout). See
-# https://docs.mattermost.com/integrations/cloud-personal-access-tokens.html#creating-a-personal-access-token.
-# It is recommended to use the OS keyring with `keyring_user` and `keyring_service`.
-# mm_token_cmd = "secret-tool lookup name automattermostatus"
+# Command that should be executed to get mattermost authentication secret (the
+# secret shall be printed on stdout). See
+# https://docs.mattermost.com/integrations/cloud-personal-access-secrets.html#creating-a-personal-access-secret.
+# It is recommended to use the OS keyring with `keyring_service`.
+# mm_secret_cmd = "secret-tool lookup name automattermostatus"
 
 
-# *user* and *service* name used to query OS keyring in order to retrieve your
-# mattermost private access token.
-keyring_user = 'myname'
-keyring_service = 'mattermost_token'
+# *service* name used to query OS keyring in order to retrieve your
+# mattermost private access secret. The user used to query the keyring is
+# `mm_user`
+keyring_service = 'mattermost_secret'
 
 # set expiry time for custom mattermost status
 expires_at = "19:30"
