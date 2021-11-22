@@ -8,6 +8,7 @@ categories = ["command-line-utilities"]
 homepage = "https://gitlab.com/matclab/automattermostatus/"
 repository = "https://gitlab.com/matclab/automattermostatus/"
 description = "Automate your mattermost custom status with the help of visible wifi SSID."
+authors =  ["Mathieu Clabaut <mathieu@clabaut.net>"]
 readme = "README.md" 
 include = [
     "src/**/*.rs",
@@ -16,8 +17,19 @@ include = [
     "config.toml.example",
     "README.md",
     "CHANGELOG.md",
-    "distrib/automattermostatus.desktop"
+    "distrib/automattermostatus.desktop",
+    "distrib/automattermostatus.service",
 ]
+
+[package.metadata.deb]
+extended-description = """
+Automate mattermost status with the help of wifi network.
+
+Use current visible wifi SSID to automate your mattermost status. This program
+is meant to either be running in background or be call regularly with option
+`--delay 0`. It will then update your mattermost custom status according to
+the config file
+"""
 
 
 # We use a separate lib in order to be able to run tests and doctests
@@ -28,6 +40,7 @@ path = "src/lib.rs"
 [[bin]]
 name = "automattermostatus"
 path= "src/main.rs"
+
 
 [profile.dev]
 # Disabling debug info speeds up builds a bunch,
@@ -67,4 +80,6 @@ tracing-subscriber = { version = "0.3.1", features = [ "fmt",  "env-filter"], de
 #replace-with = "vendored-sources"
 #[source.vendored-sources]
 #directory = "vendor"
+
+
 
