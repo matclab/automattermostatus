@@ -1,12 +1,5 @@
 #![warn(missing_docs)]
-//! Automattermostatus main components and helper functions:
-//! - [`config`]: allow to configure the application from file and command line,
-//! - [`mattermost`]:  updating custom status on a mattermost instance,
-//! - [`state`]: persistent application state (essentially the location),
-//! - [`wifiscan`]: wifi scanning for linux, macos and windows
-//! - [`offtime`]: management of time when no custom status shall be send
-//! - [`utils`]: some simple helper functions to parse time string
-//!
+//! Automattermostatus main components and helper functions used by `main`
 use anyhow::{bail, Context, Result};
 use std::path::PathBuf;
 use std::thread::sleep;
@@ -53,7 +46,7 @@ pub fn get_cache(dir: Option<PathBuf>) -> Result<Cache> {
     Ok(Cache::new(state_file_name))
 }
 
-/// Prepare a dictionnary of [`Status`] ready to be send to mattermost
+/// Prepare a dictionnary of [`MMStatus`] ready to be send to mattermost
 /// server depending upon the location being found.
 pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
     let mut res = HashMap::new();
@@ -68,7 +61,7 @@ pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
     Ok(res)
 }
 
-/// Create [Session] according to `args.secret_type`.
+/// Create [`Session`] according to `args.secret_type`.
 pub fn create_session(args: &Args) -> Result<Box<dyn BaseSession>> {
     args.mm_url.as_ref().expect("Mattermost URL is not defined");
     args.secret_type

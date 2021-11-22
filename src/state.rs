@@ -1,4 +1,7 @@
 //! Implement persistant state for current location
+//!
+//! The [`State`] also provide the [`State::update_status`] function used to propagate the custom status
+//! state to the mattermost instance
 use anyhow::{Context, Result};
 use chrono::Utc;
 use std::fs;

@@ -52,12 +52,14 @@ pub trait BaseSession {
 
 /// Base Session without authentication management
 pub struct Session {
+    #[allow(rustdoc::bare_urls)]
     /// base URL of the mattermost server like https://mattermost.example.com
     base_uri: String,
 }
 
 /// Implement [Session] authenticated with a private access token.
 pub struct SessionWithToken {
+    #[allow(rustdoc::bare_urls)]
     /// base URL of the mattermost server like https://mattermost.example.com
     pub base_uri: String,
     /// private access token for current user on the `base_uri` mattermost instance
@@ -67,6 +69,7 @@ pub struct SessionWithToken {
 ///
 /// Implement a session authenticated with a login and password
 pub struct SessionWithLogin {
+    #[allow(rustdoc::bare_urls)]
     /// base URL of the mattermost server like https://mattermost.example.com
     pub base_uri: String,
     /// private access token for current user on the `base_uri` mattermost instance
@@ -85,7 +88,7 @@ struct LoginData {
 }
 
 impl Session {
-    /// Create new empty [Session::Base] to the `base_uri` mattermost server
+    /// Create new empty [Session] to the `base_uri` mattermost server
     pub fn new(base_uri: &str) -> Self {
         Session {
             base_uri: base_uri.into(),

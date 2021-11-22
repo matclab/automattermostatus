@@ -9,7 +9,7 @@ clippy:
 
 .PHONY: doc
 doc: README.md doc/automattermostatus.1
-	 cargo doc  --no-deps --bins
+	 cargo doc  --no-deps --bins --lib
 
 doc/automattermostatus.1: target/debug/automattermostatus doc/override.h2m
 	help2man --include doc/override.h2m --output=$@ ./target/debug/automattermostatus

@@ -1,4 +1,4 @@
-//! This module Provide the `Off` trait and `OffDays` struct
+//! This module Provide the [`Off`] trait and [`OffDays`] struct
 pub use chrono::Weekday;
 use chrono::{Date, Datelike, Local};
 use serde::{Deserialize, Serialize};
@@ -27,7 +27,7 @@ pub enum Parity {
     EvenWeek,
 }
 
-/// Struct olding a map of (`Weekday`, `Parity`) descripting day offs.
+/// Struct olding a map of ([`Weekday`], [`Parity`]) descripting day offs.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(transparent)]
 pub struct OffDays(HashMap<Weekday, Parity>);

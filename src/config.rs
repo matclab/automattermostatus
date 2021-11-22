@@ -44,7 +44,7 @@ pub struct WifiStatusConfig {
     pub text: String,
 }
 
-/// Implement [`FromStr`] for [`WifiStatusConfig`] which allows to call `parse` from a
+/// Implement [`std::str::FromStr`] for [`WifiStatusConfig`] which allows to call `parse` from a
 /// string representation:
 /// ```
 /// use lib::config::WifiStatusConfig;
@@ -73,7 +73,7 @@ impl std::str::FromStr for WifiStatusConfig {
 }
 
 // Courtesy of structopt_flags crate
-/// [`StructOpt`] implementing the verbosity parameter
+/// [`structopt::StructOpt`] implementing the verbosity parameter
 #[derive(structopt::StructOpt, Debug, Clone)]
 pub struct QuietVerbose {
     /// Increase the output's verbosity level
@@ -341,10 +341,8 @@ impl Off for Args {
 }
 
 impl Args {
-    /// Update `args.mm_secret` and `args.token` with the one fetched from OS keyring
+    /// Update `args.mm_secret`  with the one fetched from OS keyring
     ///
-    /// If the secret is a password, [token] will be updated later when login to the mattermost
-    /// server
     pub fn update_secret_with_keyring(mut self) -> Result<Self> {
         if let Some(user) = &self.mm_user {
             if let Some(service) = &self.keyring_service {
@@ -361,10 +359,10 @@ impl Args {
         Ok(self)
     }
 
-    /// Update [self.mm_secret] and [self.token] with the standard output of
-    /// [self.mm_secret_cmd] if defined.
+    /// Update `args.mm_secret`  with the standard output of
+    /// `args.mm_secret_cmd` if defined.
     ///
-    /// If the secret is a password, [token] will be updated later when login to the mattermost
+    /// If the secret is a password, `secret` will be updated later when login to the mattermost
     /// server
     pub fn update_secret_with_command(mut self) -> Result<Args> {
         if let Some(command) = &self.mm_secret_cmd {
