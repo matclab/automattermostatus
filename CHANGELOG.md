@@ -1,3 +1,13 @@
+# v0.1.8 : login simplification
+
+## Feature
+
+- possibility to use login+password to connect to mattermost server
+
+## Bugs
+
+- allow to pass `delay` of more than 255s on command line
+- continue to match wifi event after finding an empty SSID
 
 # v0.1.7 : use OS keyring and allow status for off time
 
