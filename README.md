@@ -241,6 +241,28 @@ cargo build --release --locked
 ```
 The binaries are then found in the `target/release` directory.
 
+## Launch at Startup
+### Linux
+You may either copy the `distrib/automattermostatus.desktop` in
+`/etc/xdg/autostart` or in `$HOME/.config/autostart` or if you use systemd,
+you may copy the *auttoolmostatus systemd unit*
+`distrib/automattermostatus.service` in `$HOME/.config/systemd/user` and do 
+```sh
+systemctl status --user enable --now automattermostatus
+```
+The logs are the visible with 
+```sh
+journalctl --user -u automattermostatus
+```
+
+### Windows
+
+**TODO**
+
+### Mac OS
+
+**TODO**
+
 # License
 
 Licensed under Apache License, Version 2.0 ([LICENSE-APACHE](https://www.apache.org/licenses/LICENSE-2.0)).
