@@ -161,6 +161,7 @@ pub fn get_wifi_and_update_status_loop(
 mod get_cache_should {
     use super::*;
     use anyhow::anyhow;
+    use test_log::test; // Automatically trace tests
 
     #[test]
     //#[should_panic(expected = "Internal error, no `state_dir` configured")]
@@ -178,6 +179,7 @@ mod get_cache_should {
 #[cfg(test)]
 mod prepare_status_should {
     use super::*;
+    use test_log::test; // Automatically trace tests
 
     #[test]
     fn prepare_expected_status() -> Result<()> {

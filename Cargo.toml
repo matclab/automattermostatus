@@ -60,7 +60,7 @@ mktemp = "0.4.1"
 httpmock = "0.6.2"
 mockall = "0.10.2"
 rusty-hook = "0.11.2"
-test-env-log = { version = "0.2.7", default-features = false, features = ["trace"] }
+test-log = { version = "0.2.7", default-features = false, features = ["trace"] }
 tracing-subscriber = { version = "0.3.1", features = [ "fmt",  "env-filter"], default-features = false }
 
 #[source.crates-io]

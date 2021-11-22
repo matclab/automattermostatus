@@ -158,6 +158,7 @@ impl BaseSession for SessionWithLogin {
 mod should {
     use super::*;
     use httpmock::prelude::*;
+    use test_log::test; // Automatically trace tests
     #[test]
     fn login_with_success() -> Result<()> {
         // Start a lightweight mock server.

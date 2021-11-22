@@ -113,24 +113,22 @@ impl State {
 }
 
 #[cfg(test)]
-mod tests {
+mod should {
     use super::*;
-    mod should {
-        use super::*;
-        use mktemp::Temp;
-        #[test]
-        fn remember_state() -> Result<()> {
-            let temp = Temp::new_file().unwrap().to_path_buf();
-            let cache = Cache::new(&temp);
-            let mut state = State::new(&cache)?;
-            assert_eq!(state.location, Location::Unknown);
-            state.set_location(Location::Known("abcd".to_string()), &cache)?;
-            assert_eq!(state.location, Location::Known("abcd".to_string()));
-            let mut state = State::new(&cache)?;
-            assert_eq!(state.location, Location::Known("abcd".to_string()));
-            state.set_location(Location::Known("work".to_string()), &cache)?;
-            assert_eq!(state.location, Location::Known("work".to_string()));
-            Ok(())
-        }
+    use mktemp::Temp;
+    use test_log::test; // Automatically trace tests
+    #[test]
+    fn remember_state() -> Result<()> {
+        let temp = Temp::new_file().unwrap().to_path_buf();
+        let cache = Cache::new(&temp);
+        let mut state = State::new(&cache)?;
+        assert_eq!(state.location, Location::Unknown);
+        state.set_location(Location::Known("abcd".to_string()), &cache)?;
+        assert_eq!(state.location, Location::Known("abcd".to_string()));
+        let mut state = State::new(&cache)?;
+        assert_eq!(state.location, Location::Known("abcd".to_string()));
+        state.set_location(Location::Known("work".to_string()), &cache)?;
+        assert_eq!(state.location, Location::Known("work".to_string()));
+        Ok(())
     }
 }

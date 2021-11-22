@@ -113,7 +113,7 @@ mod is_off_should {
     use super::*;
     use anyhow::Result;
     use chrono::{Local, TimeZone, Weekday};
-    use test_env_log::test; // Automatically trace tests
+    use test_log::test; // Automatically trace tests
 
     #[test]
     fn return_false_when_day_dont_match() -> Result<()> {

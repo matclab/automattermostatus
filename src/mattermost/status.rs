@@ -121,6 +121,7 @@ mod send_should {
     use super::*;
     use crate::mattermost::{BaseSession, Session};
     use httpmock::prelude::*;
+    use test_log::test; // Automatically trace tests
     #[test]
     fn send_required_json() -> Result<()> {
         // Start a lightweight mock server.

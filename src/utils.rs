@@ -38,6 +38,7 @@ pub fn parse_from_hmstr(time_str: &Option<String>) -> Option<DateTime<Local>> {
 #[cfg(test)]
 mod should {
     use super::*;
+    use test_log::test; // Automatically trace tests
 
     #[test]
     fn return_none_if_unparsable() {
