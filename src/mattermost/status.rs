@@ -153,4 +153,34 @@ mod send_should {
         assert_eq!(resp.status(), 200);
         Ok(())
     }
+    #[test]
+    fn catch_api_error() -> Result<()> {
+        // Start a lightweight mock server.
+        let server = MockServer::start();
+        let mut mmstatus = MMStatus::new("text".into(), "emoji".into());
+
+        // Create a mock on the server.
+        let server_mock = server.mock(|expect, resp_with| {
+            expect
+                .method(PUT)
+                .header("Authorization", "Bearer token")
+                .path("/api/v4/users/me/status/custom")
+                .json_body(serde_json::json!({"emoji":"emoji","text":"text"}
+                ));
+            resp_with
+                .status(500)
+                .header("content-type", "text/html")
+                .body("Internal error");
+        });
+
+        // Send an HTTP request to the mock server. This simulates your code.
+        let mut session: Box<dyn BaseSession> =
+            Box::new(Session::new(&server.url("")).with_token("token"));
+        let resp = mmstatus.send(&mut session);
+        assert!(resp.is_err());
+
+        // Ensure the specified mock was called exactly one time (or fail with a detailed error description).
+        server_mock.assert();
+        Ok(())
+    }
 }
