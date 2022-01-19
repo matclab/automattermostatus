@@ -33,11 +33,9 @@ the config file
 assets = [
     ["target/release/automattermostatus", "usr/bin/", "755"],
     ["README.md", "usr/share/doc/automattermostatus/README", "644"],
-    ["config.toml.example",
-    "usr/share/doc/automattermostatus/config.toml.example", "644"],
-    ["distrib/automattermostatus.desktop",
-    "etc/xdg/autostart/automattermostatus.desktop", "644"],
-    ["doc/automattermostatus.1", "usr/share/man/man1/automattermostatus.1"]
+    ["config.toml.example", "usr/share/doc/automattermostatus/config.toml.example", "644"],
+    ["distrib/automattermostatus.desktop", "etc/xdg/autostart/automattermostatus.desktop", "644"],
+    ["doc/automattermostatus.1", "usr/share/man/man1/automattermostatus.1", "644"]
 ]
 
 
