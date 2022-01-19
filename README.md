@@ -250,7 +250,7 @@ you may copy the *auttoolmostatus systemd unit*
 ```sh
 systemctl status --user enable --now automattermostatus
 ```
-The logs are the visible with 
+The logs are then visible with 
 ```sh
 journalctl --user -u automattermostatus
 ```

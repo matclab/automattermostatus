@@ -77,4 +77,4 @@ jobs:
           SOURCE_TAG: ${{ steps.get_version.outputs.SOURCE_TAG }}
         shell: bash
         run: |
-          then curl -f --user ignored:$GITLAB_TOKEN --upload-file target/x86_64-unknown-linux-musl/debian/automattermostatus_*_amd64.deb https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/"${SOURCE_TAG}"/ 
+          curl -f --user ignored:$GITLAB_TOKEN --upload-file target/x86_64-unknown-linux-musl/debian/automattermostatus_*_amd64.deb https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/"${SOURCE_TAG}/automattermostatus_${SOURCE_TAG}_amd64.deb"
