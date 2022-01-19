@@ -1,3 +1,7 @@
+# v0.1.9 : debian package
+
+No functional changes nor bug fixes.
+
 # v0.1.8 : login simplification
 
 ## Feature
