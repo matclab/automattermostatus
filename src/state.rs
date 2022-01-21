@@ -105,9 +105,10 @@ impl State {
                 return Ok(());
             }
         }
-        self.set_location(current_location, cache)?;
         // We update the status on MM
         status.unwrap().send(session)?;
+        // We update the location (only if setting mattermost status succeed)
+        self.set_location(current_location, cache)?;
         Ok(())
     }
 }
