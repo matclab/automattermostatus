@@ -1,3 +1,10 @@
+# v0.1.10 : Bug correction
+
+## Bugs
+
+- #2 which prevent a status update if there is some connection problem at
+  startup
+
 # v0.1.9 : debian package
 
 No functional changes nor bug fixes.
