@@ -104,7 +104,7 @@ pub fn get_wifi_and_update_status_loop(
         .is_wifi_enabled()
         .context("Checking if wifi is enabled")?
     {
-        bail!("wifi is disabled");
+        error!("wifi is disabled");
     } else {
         info!("Wifi is enabled");
     }
