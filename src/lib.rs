@@ -4,7 +4,7 @@ use anyhow::{bail, Context, Result};
 use std::path::PathBuf;
 use std::thread::sleep;
 use std::{collections::HashMap, time};
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter};
 
@@ -125,27 +125,31 @@ pub fn get_wifi_and_update_status_loop(
                         debug!("known wifi '{}' detected", wifi_substring);
                         found_ssid = true;
                         mmstatus.expires_at(&args.expires_at);
-                        state
-                            .update_status(l.clone(), Some(mmstatus), &mut session, &cache)
-                            .context("Updating status")?;
+                        if let Err(e) =
+                            state.update_status(l.clone(), Some(mmstatus), &mut session, &cache)
+                        {
+                            error!("Fail to update status : {}", e)
+                        }
                         break;
                     }
                 }
             }
             if !found_ssid {
                 debug!("Unknown wifi");
-                state
-                    .update_status(Location::Unknown, None, &mut session, &cache)
-                    .context("Updating status")?;
+                if let Err(e) = state.update_status(Location::Unknown, None, &mut session, &cache) {
+                    error!("Fail to update status : {}", e)
+                }
             }
         } else {
             // Send status for Off time (the one with empty wifi_substring).
             let off_location = Location::Known("".to_string());
             if let Some(offstatus) = status_dict.get_mut(&off_location) {
                 debug!("Setting state for Offtime");
-                state
-                    .update_status(off_location, Some(offstatus), &mut session, &cache)
-                    .context("Updating status")?;
+                if let Err(e) =
+                    state.update_status(off_location, Some(offstatus), &mut session, &cache)
+                {
+                    error!("Fail to update status : {}", e)
+                }
             }
         }
         if let Some(0) = args.delay {
