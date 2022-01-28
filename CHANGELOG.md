@@ -1,3 +1,10 @@
+# v0.2.0 
+
+## Breaking change
+Configuration file has move. Please move it before upgrading.
+- On windows configuration file is read from `{FOLDERID_RoamingAppData}\ams\automattermostatus\config` instead of `{FOLDERID_RoamingAppData}\clabaut\automattermostatus\config`.
+- On MacOS  configuration file is read from `$HOME/Library/Application Support/net.ams.automattermost` instead of `$HOME/Library/Application Support/net.clabaut.automattermost`.
+
 # v0.1.10 : Bug correction
 
 ## Bugs

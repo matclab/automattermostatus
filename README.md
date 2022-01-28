@@ -10,7 +10,7 @@ page](https://gitlab.com/matclab/automattermostatus/-/releases).
 Here after is the command line help.
 <!-- `$ target/debug/automattermostatus --help` as text -->
 ```text
-automattermostatus 0.1.10
+automattermostatus 0.2.0
 Automate mattermost status with the help of wifi network
 
 Use current visible wifi SSID to automate your mattermost status. This program is meant to either be running in
@@ -99,8 +99,8 @@ line (the later override the former).
 ### Config File
 The config file is created if it does not exist.  It is created or read in the following places depending on your OS:
 -    the [XDG user directory](https://www.freedesktop.org/wiki/Software/xdg-user-dirs/) specifications on Linux (usually `~/.config/automattermostatus/automattermostatus.toml`),
--    the [Known Folder system](https://msdn.microsoft.com/en-us/library/windows/desktop/dd378457.aspx) on Windows (usually `{FOLDERID_RoamingAppData}\automattermostatus\config`),
--    the [Standard Directories](https://developer.apple.com/library/content/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html#//apple_ref/doc/uid/TP40010672-CH2-SW6) on macOS (usually `$HOME/Library/Application Support/automattermost`).
+-    the [Known Folder system](https://msdn.microsoft.com/en-us/library/windows/desktop/dd378457.aspx) on Windows (usually `{FOLDERID_RoamingAppData}\ams\automattermostatus\config`),
+-    the [Standard Directories](https://developer.apple.com/library/content/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html#//apple_ref/doc/uid/TP40010672-CH2-SW6) on macOS (usually `$HOME/Library/Application Support/net.ams.automattermost`).
 
 A sample config file is:
 

@@ -300,7 +300,7 @@ impl Default for Args {
             status: ["home::house::working at home".to_string()].to_vec(),
             delay: Some(60),
             state_dir: Some(
-                ProjectDirs::from("net", "clabaut", "automattermostatus")
+                ProjectDirs::from("net", "ams", "automattermostatus")
                     .expect("Unable to find a project dir")
                     .cache_dir()
                     .to_owned(),
@@ -388,7 +388,7 @@ impl Args {
     pub fn merge_config_and_params(&self) -> Result<Args> {
         let default_args = Args::default();
         debug!("default Args : {:#?}", default_args);
-        let conf_dir = ProjectDirs::from("net", "clabaut", "automattermostatus")
+        let conf_dir = ProjectDirs::from("net", "ams", "automattermostatus")
             .expect("Unable to find a project dir")
             .config_dir()
             .to_owned();
