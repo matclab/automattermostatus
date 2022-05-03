@@ -1,14 +1,23 @@
+SHELL=bash
 
-all: fmt doc clippy
+.DEFAULT_GOAL := all
+.PHONY: help
 
-fmt:
+help: ### Print this help message
+	@grep -h -E '^[^ :]+:.*?## .*$$' $(MAKEFILE_LIST) \
+	| sed -n 's/^\(.*\):\(.*\)##\(.*\)/\1▅\3/p' \
+	| column -t  -s '▅'
+
+all: fmt doc clippy ### format + doc + clippy
+
+fmt: ### format code
 	cargo fmt
 
-clippy:
+clippy: ### run clippy
 	cargo clippy 
 
 .PHONY: doc
-doc: README.md doc/automattermostatus.1
+doc: README.md doc/automattermostatus.1 ### make man page and update README
 	 cargo doc  --no-deps --bins --lib
 
 doc/automattermostatus.1: target/debug/automattermostatus doc/override.h2m

@@ -1,3 +1,8 @@
+# v0.2.1 
+
+Tentative fix for #2 where mattermosr instance does not always take the 
+custom status into account despite returning 200.
+
 # v0.2.0 
 
 ## Breaking change

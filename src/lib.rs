@@ -128,9 +128,13 @@ pub fn get_wifi_and_update_status_loop(
                         debug!("known wifi '{}' detected", wifi_substring);
                         found_ssid = true;
                         mmstatus.expires_at(&args.expires_at);
-                        if let Err(e) =
-                            state.update_status(l.clone(), Some(mmstatus), &mut session, &cache)
-                        {
+                        if let Err(e) = state.update_status(
+                            l.clone(),
+                            Some(mmstatus),
+                            &mut session,
+                            &cache,
+                            delay_duration.as_secs(),
+                        ) {
                             error!("Fail to update status : {}", e)
                         }
                         break;
@@ -139,7 +143,13 @@ pub fn get_wifi_and_update_status_loop(
             }
             if !found_ssid {
                 debug!("Unknown wifi");
-                if let Err(e) = state.update_status(Location::Unknown, None, &mut session, &cache) {
+                if let Err(e) = state.update_status(
+                    Location::Unknown,
+                    None,
+                    &mut session,
+                    &cache,
+                    delay_duration.as_secs(),
+                ) {
                     error!("Fail to update status : {}", e)
                 }
             }
@@ -148,9 +158,13 @@ pub fn get_wifi_and_update_status_loop(
             let off_location = Location::Known("".to_string());
             if let Some(offstatus) = status_dict.get_mut(&off_location) {
                 debug!("Setting state for Offtime");
-                if let Err(e) =
-                    state.update_status(off_location, Some(offstatus), &mut session, &cache)
-                {
+                if let Err(e) = state.update_status(
+                    off_location,
+                    Some(offstatus),
+                    &mut session,
+                    &cache,
+                    delay_duration.as_secs(),
+                ) {
                     error!("Fail to update status : {}", e)
                 }
             }

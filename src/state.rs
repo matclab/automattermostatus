@@ -14,7 +14,7 @@ use std::path::PathBuf;
 /// If more than MAX_SECS_BEFORE_FORCE_UPDATE are elapsed, we forcibly update
 /// mattermost custom status to the expected value even if there was no change in visible
 /// wifi SSIDs.
-const MAX_SECS_BEFORE_FORCE_UPDATE: i64 = 60 * 60;
+const MAX_SECS_BEFORE_FORCE_UPDATE: u64 = 60 * 60;
 
 /// Struct implementing a cache for the application state
 #[derive(Debug)]
@@ -91,13 +91,19 @@ impl State {
         status: Option<&mut MMStatus>,
         session: &mut Box<dyn BaseSession>,
         cache: &Cache,
+        delay_between_polling: u64,
     ) -> Result<()> {
         if current_location == Location::Unknown {
             return Ok(());
         } else if current_location == self.location {
             // Less than max seconds have elapsed.
             // No need to update MM status again
-            if Utc::now().timestamp() - self.timestamp <= MAX_SECS_BEFORE_FORCE_UPDATE {
+            let elapsed_sec: u64 = (Utc::now().timestamp() - self.timestamp)
+                .try_into()
+                .unwrap();
+            if delay_between_polling * 2 < elapsed_sec
+                && elapsed_sec <= MAX_SECS_BEFORE_FORCE_UPDATE
+            {
                 debug!(
                     "No change for {}s : no update to mattermost status",
                     MAX_SECS_BEFORE_FORCE_UPDATE
