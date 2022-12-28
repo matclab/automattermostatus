@@ -1,3 +1,6 @@
+# v0.2.2 
+
+Update dependencies
 # v0.2.1 
 
 Tentative fix for #2 where mattermosr instance does not always take the 

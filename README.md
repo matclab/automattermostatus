@@ -10,7 +10,7 @@ page](https://gitlab.com/matclab/automattermostatus/-/releases).
 Here after is the command line help.
 <!-- `$ target/debug/automattermostatus --help` as text -->
 ```text
-automattermostatus 0.2.1
+automattermostatus 0.2.2
 Automate mattermost status with the help of wifi network
 
 Use current visible wifi SSID to automate your mattermost status. This program is meant to either be running in
