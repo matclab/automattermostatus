@@ -11,12 +11,13 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter};
 
 pub mod config;
 pub mod mattermost;
+pub mod micscan;
 pub mod offtime;
 pub mod state;
 pub mod utils;
 pub mod wifiscan;
 pub use config::{Args, SecretType, WifiStatusConfig};
-pub use mattermost::{BaseSession, MMStatus, Session};
+pub use mattermost::{BaseSession, LoggedSession, MMCutomStatus, Session};
 use offtime::Off;
 pub use state::{Cache, Location, State};
 pub use wifiscan::{WiFi, WifiInterface};
@@ -49,23 +50,23 @@ pub fn get_cache(dir: Option<PathBuf>) -> Result<Cache> {
     Ok(Cache::new(state_file_name))
 }
 
-/// Prepare a dictionnary of [`MMStatus`] ready to be send to mattermost
+/// Prepare a dictionnary of [`MMCustomStatus`] ready to be send to mattermost
 /// server depending upon the location being found.
-pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMStatus>> {
+pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMCutomStatus>> {
     let mut res = HashMap::new();
     for s in &args.status {
         let sc: WifiStatusConfig = s.parse().with_context(|| format!("Parsing {}", s))?;
         debug!("Adding : {:?}", sc);
         res.insert(
             Location::Known(sc.wifi_string),
-            MMStatus::new(sc.text, sc.emoji),
+            MMCutomStatus::new(sc.text, sc.emoji),
         );
     }
     Ok(res)
 }
 
 /// Create [`Session`] according to `args.secret_type`.
-pub fn create_session(args: &Args) -> Result<Box<dyn BaseSession>> {
+pub fn create_session(args: &Args) -> Result<LoggedSession> {
     args.mm_url.as_ref().expect("Mattermost URL is not defined");
     args.secret_type
         .as_ref()
@@ -79,15 +80,16 @@ pub fn create_session(args: &Args) -> Result<Box<dyn BaseSession>> {
         )),
         SecretType::Token => Box::new(session.with_token(args.mm_secret.as_ref().unwrap())),
     };
-    session.login()?;
-    Ok(session)
+    let res = session.login();
+    debug!("LoggedSession {:?}", res);
+    res
 }
 
 /// Main application loop, looking for a known SSID and updating
 /// mattermost custom status accordingly.
 pub fn get_wifi_and_update_status_loop(
     args: Args,
-    mut status_dict: HashMap<Location, MMStatus>,
+    mut status_dict: HashMap<Location, MMCutomStatus>,
 ) -> Result<()> {
     let cache = get_cache(args.state_dir.to_owned()).context("Reading cached state")?;
     let mut state = State::new(&cache).context("Creating cache")?;
@@ -112,6 +114,7 @@ pub fn get_wifi_and_update_status_loop(
         info!("Wifi is enabled");
     }
     let mut session = create_session(&args)?;
+    let mut micusage = &mut micscan::MicUsage::new();
     loop {
         if !&args.is_off_time() {
             let ssids = wifi.visible_ssid().context("Getting visible SSIDs")?;
@@ -169,6 +172,7 @@ pub fn get_wifi_and_update_status_loop(
                 }
             }
         }
+        micusage = micusage.update_dnd_status(&args, &mut session)?;
         if let Some(0) = args.delay {
             break;
         } else {
@@ -213,18 +217,18 @@ mod prepare_status_should {
             ..Default::default()
         };
         let res = prepare_status(&args)?;
-        let mut expected: HashMap<state::Location, mattermost::MMStatus> = HashMap::new();
+        let mut expected: HashMap<state::Location, mattermost::MMCutomStatus> = HashMap::new();
         expected.insert(
             Location::Known("".to_string()),
-            MMStatus::new("off text".to_string(), "off".to_string()),
+            MMCutomStatus::new("off text".to_string(), "off".to_string()),
         );
         expected.insert(
             Location::Known("a".to_string()),
-            MMStatus::new("c".to_string(), "b".to_string()),
+            MMCutomStatus::new("c".to_string(), "b".to_string()),
         );
         expected.insert(
             Location::Known("d".to_string()),
-            MMStatus::new("f".to_string(), "e".to_string()),
+            MMCutomStatus::new("f".to_string(), "e".to_string()),
         );
         assert_eq!(res, expected);
         Ok(())

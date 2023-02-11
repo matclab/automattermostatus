@@ -278,6 +278,11 @@ pub struct Args {
     #[structopt(long, env)]
     pub delay: Option<u32>,
 
+    /// List of
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[structopt(short, long, name = "app binary name")]
+    pub mic_app_names: Vec<String>,
+
     #[allow(missing_docs)]
     #[structopt(flatten)]
     #[serde(deserialize_with = "de_from_str")]
@@ -311,6 +316,7 @@ impl Default for Args {
             mm_secret_cmd: None,
             secret_type: Some(SecretType::Password),
             mm_url: Some("https://mattermost.example.com".into()),
+            mic_app_names: Vec::new(),
             verbose: QuietVerbose {
                 verbosity_level: 1,
                 quiet_level: 0,
@@ -401,7 +407,9 @@ impl Args {
                 .unwrap_or_else(|_| panic!("Unable to write default config file {:?}", conf_file));
         }
 
-        let config_args: Args = Figment::from(Toml::file(&conf_file)).extract()?;
+        let config_args: Args = Figment::from(Toml::file(&conf_file))
+            .extract()
+            .with_context(|| format!("Reading conf file {:?}", &conf_file))?;
         debug!("config Args : {:#?}", config_args);
         debug!("parameter Args : {:#?}", self);
         // Merge config Default → Config File → command line args

@@ -1,4 +1,4 @@
-//! This module exports [Session] and [MMStatus]
+//! This module exports [Session], [MMStatus] and [MMCustomStatus]
 //!
 pub mod session;
 pub mod status;

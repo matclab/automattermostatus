@@ -7,7 +7,7 @@ use chrono::Utc;
 use std::fs;
 use tracing::{debug, info};
 
-use crate::mattermost::{BaseSession, MMStatus};
+use crate::mattermost::{LoggedSession, MMCutomStatus};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -42,7 +42,7 @@ pub enum Location {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct State {
     location: Location,
-    timestamp: i64,
+    lastchange_timestamp: i64,
 }
 
 impl State {
@@ -58,7 +58,7 @@ impl State {
         } else {
             res = Self {
                 location: Location::Unknown,
-                timestamp: 0,
+                lastchange_timestamp: 0,
             };
         }
         debug!("Previous known location `{:?}`", res.location);
@@ -69,7 +69,7 @@ impl State {
     pub fn set_location(&mut self, location: Location, cache: &Cache) -> Result<()> {
         info!("Set location to `{:?}`", location);
         self.location = location;
-        self.timestamp = Utc::now().timestamp();
+        self.lastchange_timestamp = Utc::now().timestamp();
         fs::write(
             &cache.path,
             serde_json::to_string(&self)
@@ -88,8 +88,8 @@ impl State {
     pub fn update_status(
         &mut self,
         current_location: Location,
-        status: Option<&mut MMStatus>,
-        session: &mut Box<dyn BaseSession>,
+        status: Option<&mut MMCutomStatus>,
+        session: &mut LoggedSession,
         cache: &Cache,
         delay_between_polling: u64,
     ) -> Result<()> {
@@ -98,7 +98,7 @@ impl State {
         } else if current_location == self.location {
             // Less than max seconds have elapsed.
             // No need to update MM status again
-            let elapsed_sec: u64 = (Utc::now().timestamp() - self.timestamp)
+            let elapsed_sec: u64 = (Utc::now().timestamp() - self.lastchange_timestamp)
                 .try_into()
                 .unwrap();
             if delay_between_polling * 2 < elapsed_sec

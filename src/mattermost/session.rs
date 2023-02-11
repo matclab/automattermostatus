@@ -32,11 +32,14 @@
 //! let token = session.token()?;
 //! # Ok::<(), anyhow::Error>(())
 //! ```
-//!
+//! Types sequence is either one of :
+//! - Session → SessionWithToken → LoggedSession
+//! - Session → SessionWithCredentials → LoggedSession
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::mem;
+use tracing::debug;
 
 /// Trait implementing function necessary to establish a session (getting a authenticating token).
 pub trait BaseSession {
@@ -47,7 +50,7 @@ pub trait BaseSession {
     fn base_uri(&self) -> &str;
 
     /// Login to mattermost instance
-    fn login(&mut self) -> Result<()>;
+    fn login(&mut self) -> Result<LoggedSession>;
 }
 
 /// Base Session without authentication management
@@ -68,7 +71,7 @@ pub struct SessionWithToken {
 }
 ///
 /// Implement a session authenticated with a login and password
-pub struct SessionWithLogin {
+pub struct SessionWithCredentials {
     #[allow(rustdoc::bare_urls)]
     /// base URL of the mattermost server like https://mattermost.example.com
     pub base_uri: String,
@@ -79,6 +82,21 @@ pub struct SessionWithLogin {
     user: String,
     /// user password
     password: String,
+}
+
+///  Session once logged
+#[derive(Debug)]
+pub struct LoggedSession {
+    #[allow(rustdoc::bare_urls)]
+    /// base URL of the mattermost server like https://mattermost.example.com
+    pub base_uri: String,
+    /// (either permanent and given at init or renewable with the help of login function)
+    pub token: String,
+    /// Mattermost internal user_id
+    pub user_id: String,
+    // Used to relog when logged out
+    user: Option<String>,
+    password: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -102,8 +120,8 @@ impl Session {
         }
     }
     /// Add login credentials to current [Session]
-    pub fn with_credentials(&mut self, user_login: &str, password: &str) -> SessionWithLogin {
-        SessionWithLogin {
+    pub fn with_credentials(&mut self, user_login: &str, password: &str) -> SessionWithCredentials {
+        SessionWithCredentials {
             user: user_login.into(),
             password: password.into(),
             token: None,
@@ -119,12 +137,27 @@ impl BaseSession for SessionWithToken {
     fn base_uri(&self) -> &str {
         &self.base_uri
     }
-    fn login(&mut self) -> Result<()> {
-        Ok(())
+    fn login(&mut self) -> Result<LoggedSession> {
+        let uri = self.base_uri.to_owned() + "/api/v4/users/me";
+        let json: serde_json::Value = ureq::get(&uri)
+            .set("Authorization", &("Bearer ".to_owned() + &self.token))
+            .call()?
+            .into_json()?;
+        debug!("User info: {:?}", json);
+        Ok(LoggedSession {
+            base_uri: mem::take(&mut self.base_uri),
+            token: mem::take(&mut self.token),
+            user_id: json["id"]
+                .as_str()
+                .ok_or(anyhow!("Received id is not a string"))?
+                .to_string(),
+            user: None,
+            password: None,
+        })
     }
 }
 
-impl BaseSession for SessionWithLogin {
+impl BaseSession for SessionWithCredentials {
     fn token(&self) -> Result<&str> {
         if let Some(token) = &self.token {
             Ok(token)
@@ -136,21 +169,50 @@ impl BaseSession for SessionWithLogin {
         &self.base_uri
     }
 
-    fn login(&mut self) -> Result<()> {
+    fn login(&mut self) -> Result<LoggedSession> {
         let uri = self.base_uri.to_owned() + "/api/v4/users/login";
         let response = ureq::post(&uri).send_json(serde_json::to_value(LoginData {
             login_id: self.user.clone(),
             password: self.password.clone(),
         })?)?;
-        if let Some(token) = response.header("Token") {
-            self.token = Some(token.into());
-            Ok(())
-        } else {
-            Err(anyhow!(
-                "Login authentication failed (response: {})",
-                response.into_string()?
-            ))
-        }
+        let Some(token) = response.header("Token") else {
+            return Err(anyhow!(
+                "Login authentication failed"
+            ));
+        };
+        let token = token.to_string();
+        let json: serde_json::Value = response.into_json()?;
+        let user_id = json["id"].to_string();
+        Ok(LoggedSession {
+            base_uri: mem::take(&mut self.base_uri),
+            token: token.to_string(),
+            user_id,
+            user: Some(self.user.clone()),
+            password: Some(self.password.clone()),
+        })
+    }
+}
+
+impl LoggedSession {
+    /// relog in case of a short lived session token obtained wia login/password
+    pub fn relogin(&mut self) -> Result<&mut LoggedSession> {
+        let (Some(password),Some(user)) = (self.password.clone(), self.user.clone()) else {
+            // No login/password, we bail out without doing anything.
+            return Ok(self);
+        };
+
+        let uri = self.base_uri.to_owned() + "/api/v4/users/login";
+        let response = ureq::post(&uri).send_json(serde_json::to_value(LoginData {
+            login_id: user,
+            password,
+        })?)?;
+        let Some(token) = response.header("Token") else {
+            return Err(anyhow!(
+                "Login authentication failed"
+            ));
+        };
+        self.token = token.to_string();
+        Ok(self)
     }
 }
 

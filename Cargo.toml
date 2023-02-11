@@ -73,6 +73,9 @@ ureq = { version = "2.4.0", features = ["json"] }
 toml = "0.5"
 keyring = "0.10.4"
 derivative = "2.2.0"
+alsa = "0.7.0"
+procfs = {version="0.14.2", features =  [ ]} 
+pulsectl-rs = {git="https://github.com/duhdugg/pulsectl-rs", rev="98199d4", optional=true}
 #merge = "0.1.0"
 
 [dev-dependencies]
@@ -89,4 +92,7 @@ tracing-subscriber = { version = "0.3.11", features = [ "fmt",  "env-filter"], d
 #directory = "vendor"
 
 
+[features]
+default= ["pulseaudio"]
+pulseaudio = ["dep:pulsectl-rs"]
 

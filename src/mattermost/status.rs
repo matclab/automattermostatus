@@ -1,5 +1,5 @@
 //! Module responsible for sending custom status change to mattermost.
-use crate::mattermost::BaseSession;
+use crate::mattermost::LoggedSession;
 use crate::utils::parse_from_hmstr;
 use anyhow::Result;
 use chrono::{DateTime, Local};
@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 use serde_json as json;
 use std::fmt;
 use thiserror::Error;
-use tracing::debug;
+use tracing::{debug, error};
 
-/// Implement errors specific to `MMStatus`
+/// Implement errors specific to `MMCustomStatus`
 #[allow(missing_docs)]
 #[derive(Debug, Error)]
 pub enum MMSError {
@@ -22,11 +22,142 @@ pub enum MMSError {
     LoginError(#[from] anyhow::Error),
 }
 
+trait MMSendable {
+    fn _send_at_once(
+        &self,
+        session: &LoggedSession,
+        api_path: &str,
+    ) -> Result<ureq::Response, ureq::Error>;
+    fn send_at(
+        &mut self,
+        session: &mut LoggedSession,
+        api_path: &str,
+    ) -> Result<ureq::Response, MMSError>;
+    fn to_json(&self) -> Result<String, MMSError>;
+    #[allow(unused)]
+    fn set_user_id(&mut self, user_id: String) {
+        // empty implementation. Would be overrided if needed
+    }
+}
+
+impl<T> MMSendable for T
+where
+    T: Serialize + std::fmt::Debug + Clone,
+{
+    /// This function is essentially used for debugging or testing
+    fn to_json(&self) -> Result<String, MMSError> {
+        json::to_string(&self).map_err(MMSError::BadJSONData)
+    }
+
+    /// Send self once as json
+    /// `api_path` looks like "/api/v4/users/me/status/custom"
+    #[allow(clippy::borrowed_box)] // Box needed beacause we can get two different types.
+    fn _send_at_once(
+        &self,
+        session: &LoggedSession,
+        api_path: &str,
+    ) -> Result<ureq::Response, ureq::Error> {
+        let token = session.token.clone();
+        let uri = session.base_uri.to_owned() + api_path;
+        debug!("Sending {:?} to {}", self, uri);
+        ureq::put(&uri)
+            .set("Authorization", &("Bearer ".to_owned() + &token))
+            .send_json(serde_json::to_value(&self).unwrap_or_else(|e| {
+                panic!(
+                    "Serialization of MMCustomStatus '{:?}' failed with {:?}",
+                    &self, &e
+                )
+            }))
+    }
+
+    /// Send self as json, trying to login once in case of 401 failure.
+    /// `api_path` looks like "/api/v4/users/me/status/custom"
+    fn send_at(
+        &mut self,
+        session: &mut LoggedSession,
+        api_path: &str,
+    ) -> Result<ureq::Response, MMSError> {
+        debug!("Post status: {}", self.to_owned().to_json()?);
+        match self._send_at_once(session, api_path) {
+            Ok(response) => Ok(response),
+            Err(ureq::Error::Status(code, response)) => {
+                /* the server returned an unexpected status
+                code (such as 400, 500 etc) */
+                if code == 401 {
+                    // relogin and retry
+                    let _ = session.relogin().map_err(MMSError::LoginError)?;
+                    //self.set_user_id(loggedsession.user_id);
+                    self._send_at_once(session, api_path)
+                } else {
+                    Err(ureq::Error::Status(code, response))
+                }
+            }
+            Err(e) => Err(e),
+        }
+        .map_err(MMSError::HTTPRequestError)
+    }
+}
+
+/// Authorized status values for MM Status API
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum Status {
+    /// User is online
+    #[serde(rename = "online")]
+    Online,
+    /// User is away
+    #[serde(rename = "away")]
+    Away,
+    /// User is offline
+    #[serde(rename = "offline")]
+    Offline,
+    /// User asked to not be disturbed
+    #[serde(rename = "dnd")]
+    Dnd,
+}
+
+/// Standard Mattermost status wire representation
+#[derive(Derivative, Serialize, Deserialize, Clone)]
+#[derivative(Debug)]
+pub struct MMStatus {
+    user_id: String,
+    /// the requested status
+    pub status: Status,
+    dnd_end_time: u32,
+}
+
+impl MMStatus {
+    /// Create a new status
+    pub fn new(status: Status, user_id: String) -> MMStatus {
+        MMStatus {
+            user_id,
+            status,
+            dnd_end_time: 300,
+        }
+    }
+
+    /// set user_id
+    pub fn set_user_id(&mut self, user_id: String) {
+        self.user_id = user_id;
+    }
+    /// Send self as json, trying to login once in case of 401 failure.
+    pub fn send(&mut self, session: &mut LoggedSession) {
+        match self.send_at(session, "/api/v4/users/me/status") {
+            Ok(_response) => (),
+            Err(MMSError::HTTPRequestError(response)) => {
+                /* the server returned an unexpected status
+                code (such as 400, 500 etc) */
+                error!("Unexpected response {:?}", response);
+            }
+            Err(_e) => (),
+        };
+    }
+}
+
 /// Custom struct to serialize the HTTP POST data into a json objecting using serde_json
 /// For a description of these fields see the [MatterMost OpenApi sources](https://github.com/mattermost/mattermost-api-reference/blob/master/v4/source/status.yaml)
 #[derive(Derivative, Serialize, Deserialize, Clone, PartialEq, Eq, Default)]
 #[derivative(Debug)]
-pub struct MMStatus {
+pub struct MMCutomStatus {
     /// custom status text description
     pub text: String,
     /// custom status emoji name
@@ -39,7 +170,7 @@ pub struct MMStatus {
     pub expires_at: Option<DateTime<Local>>,
 }
 
-impl fmt::Display for MMStatus {
+impl fmt::Display for MMCutomStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -49,11 +180,11 @@ impl fmt::Display for MMStatus {
     }
 }
 
-impl MMStatus {
-    /// Create a `MMStatus` ready to be sent to the `mm_base_uri` mattermost instance.
+impl MMCutomStatus {
+    /// Create a `MMCustomStatus` ready to be sent to the `mm_base_uri` mattermost instance.
     /// Authentication is done with the private access `token`.
-    pub fn new(text: String, emoji: String) -> MMStatus {
-        MMStatus {
+    pub fn new(text: String, emoji: String) -> MMCutomStatus {
+        MMCutomStatus {
             text,
             emoji,
             duration: None,
@@ -73,46 +204,9 @@ impl MMStatus {
         }
         // let dt: NaiveDateTime = NaiveDate::from_ymd(2016, 7, 8).and_hms(9, 10, 11);
     }
-    /// This function is essentially used for debugging or testing
-    pub fn to_json(&self) -> Result<String, MMSError> {
-        json::to_string(&self).map_err(MMSError::BadJSONData)
-    }
-
-    /// Send self custom status once
-    #[allow(clippy::borrowed_box)] // Box needed beacause we can get two different types.
-    pub fn _send(&self, session: &Box<dyn BaseSession>) -> Result<ureq::Response, ureq::Error> {
-        let token = session
-            .token()
-            .expect("Internal Error: token is unset in current session");
-        let uri = session.base_uri().to_owned() + "/api/v4/users/me/status/custom";
-        ureq::put(&uri)
-            .set("Authorization", &("Bearer ".to_owned() + token))
-            .send_json(serde_json::to_value(&self).unwrap_or_else(|e| {
-                panic!(
-                    "Serialization of MMStatus '{:?}' failed with {:?}",
-                    &self, &e
-                )
-            }))
-    }
-    /// Send self custom status, trying to login once in case of 401 failure.
-    pub fn send(&mut self, session: &mut Box<dyn BaseSession>) -> Result<ureq::Response, MMSError> {
-        debug!("Post status: {}", self.to_owned().to_json()?);
-        match self._send(session) {
-            Ok(response) => Ok(response),
-            Err(ureq::Error::Status(code, response)) => {
-                /* the server returned an unexpected status
-                code (such as 400, 500 etc) */
-                if code == 401 {
-                    // relogin and retry
-                    session.login().map_err(MMSError::LoginError)?;
-                    self._send(session)
-                } else {
-                    Err(ureq::Error::Status(code, response))
-                }
-            }
-            Err(e) => Err(e),
-        }
-        .map_err(MMSError::HTTPRequestError)
+    /// Send self as json, trying to login once in case of 401 failure.
+    pub fn send(&mut self, session: &mut LoggedSession) -> Result<ureq::Response, MMSError> {
+        self.send_at(session, "/api/v4/users/me/status/custom")
     }
 }
 
@@ -126,7 +220,7 @@ mod send_should {
     fn send_required_json() -> Result<()> {
         // Start a lightweight mock server.
         let server = MockServer::start();
-        let mut mmstatus = MMStatus::new("text".into(), "emoji".into());
+        let mut mmstatus = MMCutomStatus::new("text".into(), "emoji".into());
 
         // Create a mock on the server.
         let server_mock = server.mock(|expect, resp_with| {
@@ -143,8 +237,7 @@ mod send_should {
         });
 
         // Send an HTTP request to the mock server. This simulates your code.
-        let mut session: Box<dyn BaseSession> =
-            Box::new(Session::new(&server.url("")).with_token("token"));
+        let mut session = Box::new(Session::new(&server.url("")).with_token("token")).login()?;
         let resp = mmstatus.send(&mut session)?;
 
         // Ensure the specified mock was called exactly one time (or fail with a detailed error description).
@@ -157,7 +250,7 @@ mod send_should {
     fn catch_api_error() -> Result<()> {
         // Start a lightweight mock server.
         let server = MockServer::start();
-        let mut mmstatus = MMStatus::new("text".into(), "emoji".into());
+        let mut mmstatus = MMCutomStatus::new("text".into(), "emoji".into());
 
         // Create a mock on the server.
         let server_mock = server.mock(|expect, resp_with| {
@@ -174,8 +267,7 @@ mod send_should {
         });
 
         // Send an HTTP request to the mock server. This simulates your code.
-        let mut session: Box<dyn BaseSession> =
-            Box::new(Session::new(&server.url("")).with_token("token"));
+        let mut session = Box::new(Session::new(&server.url("")).with_token("token")).login()?;
         let resp = mmstatus.send(&mut session);
         assert!(resp.is_err());
 
