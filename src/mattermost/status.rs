@@ -2,7 +2,7 @@
 use crate::mattermost::LoggedSession;
 use crate::utils::parse_from_hmstr;
 use anyhow::Result;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, TimeZone};
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use serde_json as json;
@@ -195,8 +195,13 @@ impl MMCutomStatus {
     pub fn expires_at(&mut self, time_str: &Option<String>) {
         // do not set expiry time if set in the past
         if let Some(expiry) = parse_from_hmstr(time_str) {
-            if Local::now() < expiry {
-                self.expires_at = Some(expiry);
+            if Local::now().naive_local() < expiry {
+                self.expires_at = Some(
+                    Local
+                        .from_local_datetime(&expiry)
+                        .latest()
+                        .expect("Naive to local date conversion problem"),
+                );
                 self.duration = Some("date_and_time".to_owned());
             } else {
                 debug!("now {:?} >= expiry {:?}", Local::now(), expiry);

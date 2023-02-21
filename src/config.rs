@@ -334,12 +334,12 @@ impl Off for Args {
     fn is_off_time(&self) -> bool {
         self.offdays.is_off_time() // The day is off, so we are off
             || if let Some(begin) = parse_from_hmstr(&self.begin) {
-                    Local::now() < begin // now is before begin, we are off
+                    Local::now().naive_local() < begin // now is before begin, we are off
                 } else {
                     false // now is after begin, we are on duty if not after end
                 }
             || if let Some(end) = parse_from_hmstr(&self.end) {
-                    Local::now() > end // now is after end, we are off
+                    Local::now().naive_local() > end // now is after end, we are off
                 } else {
                     false // now is before end, we are on duty
                 }

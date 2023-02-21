@@ -1,6 +1,6 @@
 //! This module Provide the [`Off`] trait and [`OffDays`] struct
 pub use chrono::Weekday;
-use chrono::{Date, Datelike, Local};
+use chrono::{Datelike, Local, NaiveDate};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, trace};
@@ -41,11 +41,11 @@ struct Time {}
 #[cfg_attr(test, automock)] // create MockNow Struct for tests
 pub trait Now {
     /// Returns current local time
-    fn now(&self) -> Date<Local>;
+    fn now(&self) -> NaiveDate;
 }
 impl Now for Time {
-    fn now(&self) -> Date<Local> {
-        Local::now().date()
+    fn now(&self) -> NaiveDate {
+        Local::now().date_naive()
     }
 }
 
@@ -112,7 +112,7 @@ impl Off for OffDays {
 mod is_off_should {
     use super::*;
     use anyhow::Result;
-    use chrono::{Local, TimeZone, Weekday};
+    use chrono::Weekday;
     use test_log::test; // Automatically trace tests
 
     #[test]
@@ -120,9 +120,9 @@ mod is_off_should {
         let mut leave = OffDays::new();
         leave.insert(Weekday::Mon, Parity::EveryWeek);
         let mut mock = MockNow::new();
-        mock.expect_now()
-            .times(1)
-            .returning(|| Local.isoywd(2015, 1, Weekday::Tue));
+        mock.expect_now().times(1).returning(|| {
+            NaiveDate::from_isoywd_opt(2015, 1, Weekday::Tue).expect("Unable to convert date")
+        });
         assert_eq!(leave.is_off_at_date(mock), false);
         Ok(())
     }
@@ -132,9 +132,9 @@ mod is_off_should {
         let mut leave = OffDays::new();
         leave.insert(Weekday::Tue, Parity::EveryWeek);
         let mut mock = MockNow::new();
-        mock.expect_now()
-            .times(1)
-            .returning(|| Local.isoywd(2015, 1, Weekday::Tue));
+        mock.expect_now().times(1).returning(|| {
+            NaiveDate::from_isoywd_opt(2015, 1, Weekday::Tue).expect("Unable to convert date")
+        });
         assert_eq!(leave.is_off_at_date(mock), true);
         Ok(())
     }
@@ -145,16 +145,16 @@ mod is_off_should {
         leave.insert(Weekday::Wed, Parity::OddWeek);
 
         let mut mock = MockNow::new();
-        mock.expect_now()
-            .times(1)
-            .returning(|| Local.isoywd(2015, 15, Weekday::Wed));
+        mock.expect_now().times(1).returning(|| {
+            NaiveDate::from_isoywd_opt(2015, 15, Weekday::Wed).expect("Unable to convert date")
+        });
         assert_eq!(leave.is_off_at_date(mock), true);
 
         leave.insert(Weekday::Thu, Parity::EvenWeek);
         let mut mock = MockNow::new();
-        mock.expect_now()
-            .times(1)
-            .returning(|| Local.isoywd(2015, 16, Weekday::Thu));
+        mock.expect_now().times(1).returning(|| {
+            NaiveDate::from_isoywd_opt(2015, 16, Weekday::Thu).expect("Unable to convert date")
+        });
         assert_eq!(leave.is_off_at_date(mock), true);
 
         Ok(())
@@ -165,16 +165,16 @@ mod is_off_should {
         let mut leave = OffDays::new();
         leave.insert(Weekday::Fri, Parity::EvenWeek);
         let mut mock = MockNow::new();
-        mock.expect_now()
-            .times(1)
-            .returning(|| Local.isoywd(2015, 15, Weekday::Fri));
+        mock.expect_now().times(1).returning(|| {
+            NaiveDate::from_isoywd_opt(2015, 15, Weekday::Fri).expect("Unable to convert date")
+        });
         assert_eq!(leave.is_off_at_date(mock), false);
 
         leave.insert(Weekday::Sun, Parity::OddWeek);
         let mut mock = MockNow::new();
-        mock.expect_now()
-            .times(1)
-            .returning(|| Local.isoywd(2015, 16, Weekday::Sun));
+        mock.expect_now().times(1).returning(|| {
+            NaiveDate::from_isoywd_opt(2015, 16, Weekday::Sun).expect("Unable to convert date")
+        });
         assert_eq!(leave.is_off_at_date(mock), false);
         Ok(())
     }
