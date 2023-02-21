@@ -222,7 +222,17 @@ mod send_should {
         let server = MockServer::start();
         let mut mmstatus = MMCutomStatus::new("text".into(), "emoji".into());
 
-        // Create a mock on the server.
+        // Create mocks on the server.
+        let login_mock = server.mock(|expect, resp_with| {
+            expect
+                .method(GET)
+                .header("Authorization", "Bearer token")
+                .path("/api/v4/users/me");
+            resp_with
+                .status(200)
+                .header("content-type", "text/html")
+                .json_body(serde_json::json!({"id":"user_id"}));
+        });
         let server_mock = server.mock(|expect, resp_with| {
             expect
                 .method(PUT)
@@ -241,6 +251,7 @@ mod send_should {
         let resp = mmstatus.send(&mut session)?;
 
         // Ensure the specified mock was called exactly one time (or fail with a detailed error description).
+        login_mock.assert();
         server_mock.assert();
         // Ensure the mock server did respond as specified.
         assert_eq!(resp.status(), 200);
@@ -252,7 +263,17 @@ mod send_should {
         let server = MockServer::start();
         let mut mmstatus = MMCutomStatus::new("text".into(), "emoji".into());
 
-        // Create a mock on the server.
+        // Create mocks on the server.
+        let login_mock = server.mock(|expect, resp_with| {
+            expect
+                .method(GET)
+                .header("Authorization", "Bearer token")
+                .path("/api/v4/users/me");
+            resp_with
+                .status(200)
+                .header("content-type", "text/html")
+                .json_body(serde_json::json!({"id":"user_id"}));
+        });
         let server_mock = server.mock(|expect, resp_with| {
             expect
                 .method(PUT)
@@ -272,6 +293,7 @@ mod send_should {
         assert!(resp.is_err());
 
         // Ensure the specified mock was called exactly one time (or fail with a detailed error description).
+        login_mock.assert();
         server_mock.assert();
         Ok(())
     }
