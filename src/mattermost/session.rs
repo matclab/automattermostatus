@@ -4,21 +4,21 @@
 //! ```
 //! # use httpmock::prelude::*;
 //! # let server = MockServer::start();
-//! #   let server_mock = server.mock(|expect, resp_with| {
-//! #      expect.method(POST).path("//api/v4/users/login").json_body(
-//! #           serde_json::json!({"login_id":"username","password":"passwordtext"}
-//! #           ),
-//! #       );
-//! #      resp_with
-//! #          .status(200)
-//! #          .header("content-type", "application/json")
-//! #          .header("Token", "xyzxyz");
+//! # let server_mock = server.mock(|expect, resp_with| {
+//! #    expect.method(POST).path("/api/v4/users/login").json_body(
+//! #         serde_json::json!({"login_id":"username","password":"passwordtext"}
+//! #         ),
+//! #     );
+//! #    resp_with
+//! #        .status(200)
+//! #        .header("content-type", "application/json")
+//! #        .header("Token", "xyzxyz")
+//! #        .json_body(serde_json::json!({"id":"user_id"}));
 //! # });
-//! use lib::{Session,BaseSession};
-//! let mut session = Session::new(&server.url("/"))
-//!                   .with_credentials("username", "passwordtext");
-//! session.login()?;
-//! let token = session.token()?;
+//! use lib::{BaseSession, Session};
+//! let session = Session::new(&server.url(""))
+//!                   .with_credentials("username", "passwordtext").login()?;
+//! let token = session.token;
 //! # server_mock.assert();
 //! # Ok::<(), anyhow::Error>(())
 //! ```
@@ -26,10 +26,29 @@
 //! Or via a private access token:
 //!
 //! ```
-//! use lib::{Session,BaseSession};
-//! let mut session = Session::new("https://mattermost.example.com")
-//!                   .with_token("sdqgserdfmkjqBXHZFH:qgjr");
-//! let token = session.token()?;
+//! # use tracing_subscriber::prelude::*;
+//! # use tracing_subscriber::{fmt, layer::SubscriberExt};
+//! # let fmt_layer = fmt::layer().with_target(false);
+//! # tracing_subscriber::registry()
+//! #    .with(fmt_layer)
+//! #    .init();
+//! use lib::{BaseSession, Session};
+//! # use httpmock::prelude::*;
+//! # let server = MockServer::start();
+//! # let login_mock = server.mock(|expect, resp_with| {
+//! #     expect
+//! #         .method(GET)
+//! #         .header("Authorization", "Bearer sdqgserdfmkjqBXHZFH:qgjr")
+//! #         .path("/api/v4/users/me");
+//! #     resp_with
+//! #         .status(200)
+//! #         .header("content-type", "application/json")
+//! #         .json_body(serde_json::json!({"id":"user_id"}));
+//! # });
+//! let mut session = Session::new(&server.url(""))
+//!                   .with_token("sdqgserdfmkjqBXHZFH:qgjr").login()?;
+//! let token = session.token;
+//! # login_mock.assert();
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 //! Types sequence is either one of :
@@ -226,7 +245,7 @@ mod should {
         // Start a lightweight mock server.
         let server = MockServer::start();
 
-        // Create a mock on the server.
+        // Create mocks on the server.
         let server_mock = server.mock(|expect, resp_with| {
             expect.method(POST).path("/api/v4/users/login").json_body(
                 serde_json::json!({"login_id":"username","password":"passwordtext"}
@@ -235,13 +254,14 @@ mod should {
             resp_with
                 .status(200)
                 .header("content-type", "application/json")
-                .header("Token", "xyzxyz");
+                .header("Token", "xyzxyz")
+                .json_body(serde_json::json!({"id":"user_id"}));
         });
 
         let mut session =
             Session::new(&server.url("")).with_credentials("username", "passwordtext");
 
-        session.login()?;
+        let session = session.login()?;
 
         // Send an HTTP request to the mock server. This simulates your code.
         //let token = login(&server.url(""), Some("username"), Some("passwordtext"))?;
@@ -249,7 +269,7 @@ mod should {
         // Ensure the specified mock was called exactly one time (or fail with a detailed error description).
         server_mock.assert();
         // Ensure the mock server did respond as specified.
-        assert_eq!(session.token()?, "xyzxyz");
+        assert_eq!(session.token, "xyzxyz");
         assert_eq!(session.base_uri, server.url(""));
         Ok(())
     }
