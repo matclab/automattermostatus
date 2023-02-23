@@ -42,6 +42,15 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Deactivate rusty-hook dependencie
         run: sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   
+      - name: Install alsa lib on linux
+        run: |
+          sudo apt-get update 
+          sudo apt-get install libasound2-dev libpulse0
+        if: matrix.os == 'ubuntu-latest'
+#      - name: Install alsa lib on macos
+#        run: |
+#          brew install alsa-lib
+#        if: matrix.os == 'macOS-latest'
       - name: Test
         uses: actions-rs/cargo@v1
         with:

@@ -37,6 +37,7 @@ style:
     - rustc --version
     - cargo version
     - cargo fmt -- --check
+    - "apt-get update && apt-get install -y libasound2-dev"
     - cargo clippy
 
 .build-windows: # done on github for now
@@ -65,6 +66,7 @@ build-linux:
     RUSTFLAGS: "-D warnings" # Disallow warnings
   script:
     - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
+    - "apt-get update && apt-get install -y libasound2-dev libpulse0"
     - cargo build --release 
   artifacts:
     paths:
@@ -77,6 +79,7 @@ test-linux:
     - if [ ! -x .cargo/bin/cargo2junit ] ; then cargo install cargo2junit; fi
   script:
     - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
+    - "apt-get update && apt-get install -y libasound2-dev libpulse0"
     - cargo test -- -Z unstable-options --format json --report-time | .cargo/bin/cargo2junit > tests.xml
   artifacts:
     paths:
@@ -92,6 +95,7 @@ test-linux-beta:
     - if [ ! -x .cargo/bin/cargo2junit ] ;  then cargo install cargo2junit; fi
   script:
     - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
+    - "apt-get update && apt-get install -y libasound2-dev libpulse0"
     - cargo test -- -Z unstable-options --format json --report-time | .cargo/bin/cargo2junit > tests.xml
   artifacts:
     paths:
@@ -107,6 +111,7 @@ test-linux-beta:
     - if [ ! -x .cargo/bin/cargo2junit ] then cargo install cargo2junit; fi
   script:
     - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
+    - "apt-get install -y libasound2-dev libpulse0"
     - cargo +nightly test -- -Z unstable-options --format json --report-time | .cargo/bin/cargo2junit > tests.xml
   artifacts:
     paths:
@@ -134,6 +139,7 @@ test-linux-beta:
 code-coverage:
   image: xd009642/tarpaulin:develop-nightly
   script:
+    - "apt-get update && apt-get install -y libasound2-dev libpulse0"
     - cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --coveralls $COVERALLS_TOKEN 
   coverage: '/\d+.\d+% coverage, \d+\/\d+ lines covered/'
   interruptible: true
