@@ -4,8 +4,17 @@ use anyhow::Result;
 use tracing::info;
 #[cfg(target_os = "linux")]
 mod linux;
+#[cfg(target_os = "macos")]
+mod osx;
+#[cfg(target_os = "windows")]
+mod windows;
+
 #[cfg(target_os = "linux")]
 pub use linux::processes_owning_mic;
+#[cfg(target_os = "macos")]
+pub use osx::processes_owning_mic;
+#[cfg(target_os = "windows")]
+pub use windows::processes_owning_mic;
 
 use crate::config::Args;
 use crate::mattermost::{LoggedSession, MMStatus, Status};
