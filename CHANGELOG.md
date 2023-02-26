@@ -1,6 +1,11 @@
 # v0.2.2 
 
-Update dependencies
+Add fetaure to set the status to *do not disturb* when the microphone is used
+by configured applications (linux only for now).
+
+Update dependencies.
+
+
 # v0.2.1 
 
 Tentative fix for #2 where mattermosr instance does not always take the 

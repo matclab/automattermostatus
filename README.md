@@ -1,5 +1,7 @@
 # auto*mat-termo-st*atus
-Automate your mattermost custom status with the help of visible Wi-Fi SSID.
+Automate your mattermost custom status with the help of visible Wi-Fi SSID and
+set your status to *do not disturb* when in visio (i.e. when a choosen
+application is using your microphone)
 
 Development site is hosted on [gitlab](https://gitlab.com/matclab/automattermostatus).
 
@@ -37,6 +39,9 @@ FLAGS:
 
 
 OPTIONS:
+    -m, --mic-app-names <app binary name>...      
+            List of application watched for using the microphone
+
     -b, --begin <begin hh:mm>                     
             beginning of status update with the format hh:mm
             
@@ -111,7 +116,7 @@ A sample config file is:
 # Wifi interface name. Use to check that wifi is enabled (Mac and Windows)
 interface_name = 'wlp0s20f3'
 
-# Status string containing 3 fields separated by `::`
+# Custom status string containing 3 fields separated by `::`
 #  - First field is the wifi substring that should be contained in a visible SSID
 #    for this status to be set. If empty the associated status wil be used for
 #    off times.
@@ -124,6 +129,10 @@ status = ["corporatewifi::corplogo::On premise work",
 
 # Base url of the mattermost instanbce
 mm_url = 'https://mattermost.example.com'
+
+# Mattermost staus will be set to *do not disturb* when one of those
+# applications use the microphone.
+mic_app_names = [ 'zoom', 'firefox', 'chromium' ]
 
 # Level of verbosity among Off, Error, Warn, Info, Debug, Trace
 verbose = 'Info'
@@ -169,6 +178,7 @@ end = "19:30"
 Sat = 'EveryWeek'
 Sun = 'EveryWeek'
 Wed = 'EvenWeek'
+
 ```
 
 ### Mattermost Authentication Secret

@@ -278,7 +278,7 @@ pub struct Args {
     #[structopt(long, env)]
     pub delay: Option<u32>,
 
-    /// List of
+    /// List of application watched for using the microphone
     #[serde(skip_serializing_if = "Vec::is_empty")]
     #[structopt(short, long, name = "app binary name")]
     pub mic_app_names: Vec<String>,
