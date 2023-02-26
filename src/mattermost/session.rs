@@ -204,7 +204,7 @@ impl BaseSession for SessionWithCredentials {
         let user_id = json["id"].to_string();
         Ok(LoggedSession {
             base_uri: mem::take(&mut self.base_uri),
-            token: token.to_string(),
+            token,
             user_id,
             user: Some(self.user.clone()),
             password: Some(self.password.clone()),

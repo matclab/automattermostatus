@@ -62,10 +62,10 @@ where
 
 fn pid_from_status_file(lines: &str) -> Result<i32> {
     let pid: String = lines
-        .split("\n")
+        .split('\n')
         .filter(|x| x.starts_with("owner_pid"))
         .map(|x| {
-            x.split(":")
+            x.split(':')
                 .skip(1)
                 .collect::<Vec<&str>>()
                 .join("")

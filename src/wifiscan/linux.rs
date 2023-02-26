@@ -16,7 +16,7 @@ impl WifiInterface for WiFi {
     /// Check if wireless network adapter is enabled.
     fn is_wifi_enabled(&self) -> Result<bool, WifiError> {
         let output = Command::new("nmcli")
-            .args(&["radio", "wifi"])
+            .args(["radio", "wifi"])
             .output()
             .map_err(WifiError::IoError)?;
 
@@ -25,10 +25,10 @@ impl WifiInterface for WiFi {
 
     fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {
         let output = Command::new("nmcli")
-            .args(&["-t", "-m", "tabular", "-f", "SSID", "device", "wifi"])
+            .args(["-t", "-m", "tabular", "-f", "SSID", "device", "wifi"])
             .output()
             .map_err(WifiError::IoError)?;
-        let stdout = String::from_utf8_lossy(&output.stdout).to_owned();
+        let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
         Ok(stdout.split('\n').map(str::to_string).collect())
     }
 }

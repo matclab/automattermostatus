@@ -62,7 +62,7 @@ where
         debug!("Sending {:?} to {}", self, uri);
         ureq::put(&uri)
             .set("Authorization", &("Bearer ".to_owned() + &token))
-            .send_json(serde_json::to_value(&self).unwrap_or_else(|e| {
+            .send_json(serde_json::to_value(self).unwrap_or_else(|e| {
                 panic!(
                     "Serialization of MMCustomStatus '{:?}' failed with {:?}",
                     &self, &e

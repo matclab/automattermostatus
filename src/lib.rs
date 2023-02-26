@@ -26,7 +26,7 @@ pub use wifiscan::{WiFi, WifiInterface};
 /// (Tracing is a bit more involving to set up but will provide much more feature if needed)
 pub fn setup_tracing(args: &Args) -> Result<()> {
     let fmt_layer = fmt::layer().with_target(false);
-    let filter_layer = EnvFilter::try_new(args.verbose.get_level_filter().to_string()).unwrap();
+    let filter_layer = EnvFilter::try_new(args.verbose.get_level_filter()).unwrap();
 
     tracing_subscriber::registry()
         .with(filter_layer)
@@ -40,7 +40,7 @@ pub fn get_cache(dir: Option<PathBuf>) -> Result<Cache> {
     let mut state_file_name: PathBuf;
     if let Some(ref state_dir) = dir {
         state_file_name = PathBuf::from(state_dir);
-        fs::create_dir_all(&state_dir)
+        fs::create_dir_all(state_dir)
             .with_context(|| format!("Creating cache dir {:?}", &state_dir))?;
     } else {
         bail!("Internal Error, no `state_dir` configured");

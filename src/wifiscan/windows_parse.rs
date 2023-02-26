@@ -1,9 +1,9 @@
 pub(crate) fn extract_netsh_ssid(netsh_output: &str) -> Vec<String> {
     netsh_output
-        .split("\n")
+        .split('\n')
         .filter(|x| x.starts_with("SSID"))
         .map(|x| {
-            x.split(":")
+            x.split(':')
                 .skip(1)
                 .collect::<Vec<&str>>()
                 .join(":")

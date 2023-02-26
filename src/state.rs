@@ -127,7 +127,7 @@ mod should {
     #[test]
     fn remember_state() -> Result<()> {
         let temp = Temp::new_file().unwrap().to_path_buf();
-        let cache = Cache::new(&temp);
+        let cache = Cache::new(temp);
         let mut state = State::new(&cache)?;
         assert_eq!(state.location, Location::Unknown);
         state.set_location(Location::Known("abcd".to_string()), &cache)?;

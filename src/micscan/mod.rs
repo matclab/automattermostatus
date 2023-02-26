@@ -15,6 +15,12 @@ pub struct MicUsage {
     used: bool,
 }
 
+impl Default for MicUsage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MicUsage {
     /// Create new MicUsage struct
     pub fn new() -> Self {

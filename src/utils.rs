@@ -28,8 +28,8 @@ pub fn parse_from_hmstr(time_str: &Option<String>) -> Option<NaiveDateTime> {
                 }
             }
         };
-        let res = Local::now().date_naive().and_hms_opt(hh, mm, 0);
-        res
+
+        Local::now().date_naive().and_hms_opt(hh, mm, 0)
     } else {
         None
     }
