@@ -52,7 +52,7 @@ impl MicUsage {
                 break;
             }
         }
-        if watched_app_found && !self.used {
+        if watched_app_found {
             let mut status = MMStatus::new(Status::Dnd, session.user_id.clone());
             status.send(session);
             self.used = true;
