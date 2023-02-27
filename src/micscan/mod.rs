@@ -1,7 +1,7 @@
 //! Implement detection of process using microphone
 
 use anyhow::Result;
-use tracing::info;
+use tracing::{debug, info};
 #[cfg(target_os = "linux")]
 mod linux;
 #[cfg(target_os = "macos")]
@@ -47,6 +47,7 @@ impl MicUsage {
         let mut watched_app_found = false;
         for name in names {
             if args.mic_app_names.contains(&name) {
+                debug!("Watched app found: {:?}", name);
                 watched_app_found = true;
                 break;
             }
