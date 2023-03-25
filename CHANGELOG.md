@@ -1,6 +1,6 @@
 # v0.2.2 
 
-Add fetaure to set the status to *do not disturb* when the microphone is used
+Add feature to set the status to *do not disturb* when the microphone is used
 by configured applications (linux only for now).
 
 Update dependencies.
