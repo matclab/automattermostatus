@@ -49,20 +49,16 @@ impl State {
     /// Build a state, either by reading current persisted state in `cache`
     /// or by creating an empty default one.
     pub fn new(cache: &Cache) -> Result<Self> {
-        let res: State;
         if let Ok(json) = &fs::read(&cache.path) {
-            res = serde_json::from_str(&String::from_utf8_lossy(json)).context(format!(
-                "Unable to deserialize state file {:?} (try to remove it)",
-                &cache.path
-            ))?;
-        } else {
-            res = Self {
-                location: Location::Unknown,
-                lastchange_timestamp: 0,
-            };
+            if let Ok(res) = serde_json::from_str::<State>(&String::from_utf8_lossy(json)) {
+                debug!("Previous known location `{:?}`", res.location);
+                return Ok(res);
+            }
         }
-        debug!("Previous known location `{:?}`", res.location);
-        Ok(res)
+        Ok(Self {
+            location: Location::Unknown,
+            lastchange_timestamp: 0,
+        })
     }
 
     /// Update state with location and ensure persisting of state on disk
