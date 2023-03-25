@@ -157,7 +157,7 @@ impl MMStatus {
 /// For a description of these fields see the [MatterMost OpenApi sources](https://github.com/mattermost/mattermost-api-reference/blob/master/v4/source/status.yaml)
 #[derive(Derivative, Serialize, Deserialize, Clone, PartialEq, Eq, Default)]
 #[derivative(Debug)]
-pub struct MMCutomStatus {
+pub struct MMCustomStatus {
     /// custom status text description
     pub text: String,
     /// custom status emoji name
@@ -170,7 +170,7 @@ pub struct MMCutomStatus {
     pub expires_at: Option<DateTime<Local>>,
 }
 
-impl fmt::Display for MMCutomStatus {
+impl fmt::Display for MMCustomStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -180,11 +180,11 @@ impl fmt::Display for MMCutomStatus {
     }
 }
 
-impl MMCutomStatus {
+impl MMCustomStatus {
     /// Create a `MMCustomStatus` ready to be sent to the `mm_base_uri` mattermost instance.
     /// Authentication is done with the private access `token`.
-    pub fn new(text: String, emoji: String) -> MMCutomStatus {
-        MMCutomStatus {
+    pub fn new(text: String, emoji: String) -> MMCustomStatus {
+        MMCustomStatus {
             text,
             emoji,
             duration: None,
@@ -225,7 +225,7 @@ mod send_should {
     fn send_required_json() -> Result<()> {
         // Start a lightweight mock server.
         let server = MockServer::start();
-        let mut mmstatus = MMCutomStatus::new("text".into(), "emoji".into());
+        let mut mmstatus = MMCustomStatus::new("text".into(), "emoji".into());
 
         // Create mocks on the server.
         let login_mock = server.mock(|expect, resp_with| {
@@ -266,7 +266,7 @@ mod send_should {
     fn catch_api_error() -> Result<()> {
         // Start a lightweight mock server.
         let server = MockServer::start();
-        let mut mmstatus = MMCutomStatus::new("text".into(), "emoji".into());
+        let mut mmstatus = MMCustomStatus::new("text".into(), "emoji".into());
 
         // Create mocks on the server.
         let login_mock = server.mock(|expect, resp_with| {

@@ -7,7 +7,7 @@ use chrono::Utc;
 use std::fs;
 use tracing::{debug, info};
 
-use crate::mattermost::{LoggedSession, MMCutomStatus};
+use crate::mattermost::{LoggedSession, MMCustomStatus};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -84,7 +84,7 @@ impl State {
     pub fn update_status(
         &mut self,
         current_location: Location,
-        status: Option<&mut MMCutomStatus>,
+        status: Option<&mut MMCustomStatus>,
         session: &mut LoggedSession,
         cache: &Cache,
         delay_between_polling: u64,

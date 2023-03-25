@@ -17,7 +17,7 @@ pub mod state;
 pub mod utils;
 pub mod wifiscan;
 pub use config::{Args, SecretType, WifiStatusConfig};
-pub use mattermost::{BaseSession, LoggedSession, MMCutomStatus, Session};
+pub use mattermost::{BaseSession, LoggedSession, MMCustomStatus, Session};
 use offtime::Off;
 pub use state::{Cache, Location, State};
 pub use wifiscan::{WiFi, WifiInterface};
@@ -52,14 +52,14 @@ pub fn get_cache(dir: Option<PathBuf>) -> Result<Cache> {
 
 /// Prepare a dictionnary of [`MMCustomStatus`] ready to be send to mattermost
 /// server depending upon the location being found.
-pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMCutomStatus>> {
+pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMCustomStatus>> {
     let mut res = HashMap::new();
     for s in &args.status {
         let sc: WifiStatusConfig = s.parse().with_context(|| format!("Parsing {}", s))?;
         debug!("Adding : {:?}", sc);
         res.insert(
             Location::Known(sc.wifi_string),
-            MMCutomStatus::new(sc.text, sc.emoji),
+            MMCustomStatus::new(sc.text, sc.emoji),
         );
     }
     Ok(res)
@@ -89,7 +89,7 @@ pub fn create_session(args: &Args) -> Result<LoggedSession> {
 /// mattermost custom status accordingly.
 pub fn get_wifi_and_update_status_loop(
     args: Args,
-    mut status_dict: HashMap<Location, MMCutomStatus>,
+    mut status_dict: HashMap<Location, MMCustomStatus>,
 ) -> Result<()> {
     let cache = get_cache(args.state_dir.to_owned()).context("Reading cached state")?;
     let mut state = State::new(&cache).context("Creating cache")?;
@@ -217,18 +217,18 @@ mod prepare_status_should {
             ..Default::default()
         };
         let res = prepare_status(&args)?;
-        let mut expected: HashMap<state::Location, mattermost::MMCutomStatus> = HashMap::new();
+        let mut expected: HashMap<state::Location, mattermost::MMCustomStatus> = HashMap::new();
         expected.insert(
             Location::Known("".to_string()),
-            MMCutomStatus::new("off text".to_string(), "off".to_string()),
+            MMCustomStatus::new("off text".to_string(), "off".to_string()),
         );
         expected.insert(
             Location::Known("a".to_string()),
-            MMCutomStatus::new("c".to_string(), "b".to_string()),
+            MMCustomStatus::new("c".to_string(), "b".to_string()),
         );
         expected.insert(
             Location::Known("d".to_string()),
-            MMCutomStatus::new("f".to_string(), "e".to_string()),
+            MMCustomStatus::new("f".to_string(), "e".to_string()),
         );
         assert_eq!(res, expected);
         Ok(())
