@@ -122,7 +122,7 @@ pub struct MMStatus {
     user_id: String,
     /// the requested status
     pub status: Status,
-    dnd_end_time: u32,
+    dnd_end_time: i64,
 }
 
 impl MMStatus {
@@ -131,7 +131,7 @@ impl MMStatus {
         MMStatus {
             user_id,
             status,
-            dnd_end_time: 300,
+            dnd_end_time: Local::now().timestamp() + 300,
         }
     }
 
