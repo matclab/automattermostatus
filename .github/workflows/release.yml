@@ -72,7 +72,7 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - name: Deb Build
-        uses: matclab/cargo-deb-amd64-ubuntu@1.2
+        uses: matclab/cargo-deb-amd64-ubuntu@1.3
       - name: Get the version
         id: get_version
         run: echo ::set-output name=SOURCE_TAG::${GITHUB_REF/refs\/tags\//}
