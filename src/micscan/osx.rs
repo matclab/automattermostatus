@@ -1,5 +1,5 @@
 use anyhow::Result;
-use tracing::debug;
+//use tracing::debug;
 
 /// Return the list of application name using the default microphone,
 /// either via pulseaudio or alsa depending upon compilation option.
