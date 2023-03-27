@@ -201,7 +201,9 @@ impl BaseSession for SessionWithCredentials {
         };
         let token = token.to_string();
         let json: serde_json::Value = response.into_json()?;
-        let user_id = json["id"].to_string();
+        let user_id = json["id"].as_str()
+                .ok_or(anyhow!("Received id is not a string"))?
+                .to_string();
         Ok(LoggedSession {
             base_uri: mem::take(&mut self.base_uri),
             token,

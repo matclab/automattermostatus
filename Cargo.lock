@@ -297,7 +297,6 @@ dependencies = [
  "tracing-log",
  "tracing-subscriber",
  "ureq",
- "winapi",
  "winreg",
 ]
 

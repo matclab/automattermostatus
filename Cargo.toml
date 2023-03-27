@@ -73,8 +73,6 @@ ureq = { version = "2.4.0", features = ["json"] }
 toml = "0.5"
 keyring = "0.10.4"
 derivative = "2.2.0"
-winapi = "0.3.9"
-winreg = "0.11"
 #merge = "0.1.0"
 #
 
@@ -82,6 +80,9 @@ winreg = "0.11"
 alsa = "0.7.0"
 procfs = {version="0.14.2", features =  [ ]} 
 pulsectl-rs = {git="https://github.com/duhdugg/pulsectl-rs", rev="98199d4", optional=true}
+
+[target.'cfg(target_os="windows")'.dependencies]
+winreg = "0.11"
 
 [dev-dependencies]
 mktemp = "0.4.1"
