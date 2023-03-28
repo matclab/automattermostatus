@@ -14,28 +14,25 @@ pub fn processes_owning_mic() -> Result<Vec<String>> {
     let cur_ver = hklm.open_subkey(mic_info_path)?;
 
     //Iterate on "child" keys
-    for child_keys in cur_ver.enum_keys().map(|x| x.unwrap())
-    {
+    for child_keys in cur_ver.enum_keys().map(|x| x.unwrap()) {
         let process = cur_ver.open_subkey(child_keys.clone())?;
-        
+
         //Iterate on key's "values". Keys name are the absolute path of the application with "/" replace by "#".
         // Example : C:#Program Files (x86)#ZoomRooms#bin#ZoomRooms.exe.
         for (name, value) in process.enum_values().map(|x| x.unwrap()) {
-            
             //Trigger on "LastUsedTimeStop" value : if equal to "0" (string), micro is currently in used by concerned application.
             if name == "LastUsedTimeStop" && value.to_string() == "0" {
                 let process_path = child_keys.to_string();
-                
-				//Retrieve only application name (with extension)
+
+                //Retrieve only application name (with extension)
                 let process_path_splitted: Vec<&str> = process_path.split("#").collect();
-                if let Some(process_name) = process_path_splitted.last() { 
+                if let Some(process_name) = process_path_splitted.last() {
                     res.push(process_name.to_string());
-                } 
-                
+                }
             }
-        } 
+        }
     }
-	
+
     debug!("Process owning mic : {:?}", res);
     Ok(res)
 }
