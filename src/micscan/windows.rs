@@ -11,10 +11,9 @@ pub fn processes_owning_mic() -> Result<Vec<String>> {
 
     //Retrieve the "parent" key : under it, all application that can used the micro.
     let mic_info_path = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\microphone\\NonPackaged";
-    let cur_ver = hklm.open_subkey(mic_info_path).context(format!(
-        "Parent key {:?} not found in base register",
-        mic_info_path
-    ))?;
+    let cur_ver = hklm
+        .open_subkey(mic_info_path)
+        .context(format!("Opening key {:?} in base register", mic_info_path))?;
 
     //Iterate on "child" keys
     for child_keys in cur_ver
