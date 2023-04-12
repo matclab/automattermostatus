@@ -172,7 +172,7 @@ pub fn get_wifi_and_update_status_loop(
                 }
             }
         }
-        micusage = micusage.update_dnd_status(&args, &mut session)?;
+        micusage = micusage.update_dnd_status(&args, &mut session);
         if let Some(0) = args.delay {
             break;
         } else {
