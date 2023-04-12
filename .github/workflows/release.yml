@@ -67,21 +67,21 @@ jobs:
           if [[ $OS == windows-latest ]] ; then curl -f --user ignored:$GITLAB_TOKEN --upload-file target/release/automattermostatus.exe https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/"${SOURCE_TAG}"/automattermostatus-windows-amd64.exe ; else  true; fi
 
 
-  package:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - name: Deb Build
-        uses: matclab/cargo-deb-amd64-ubuntu@1.3
-      - name: Get the version
-        id: get_version
-        run: echo ::set-output name=SOURCE_TAG::${GITHUB_REF/refs\/tags\//}
-        shell: bash
-      - name: upload to gitlab
-        env:
-          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
-          OS: ${{ matrix.os }}
-          SOURCE_TAG: ${{ steps.get_version.outputs.SOURCE_TAG }}
-        shell: bash
-        run: |
-          curl -f --user ignored:$GITLAB_TOKEN --upload-file target/x86_64-unknown-linux-musl/debian/automattermostatus_*_amd64.deb https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/"${SOURCE_TAG}/automattermostatus_${SOURCE_TAG}_amd64.deb"
+#  package:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@master
+#      - name: Deb Build
+#        uses: matclab/cargo-deb-amd64-ubuntu@1.3
+#      - name: Get the version
+#        id: get_version
+#        run: echo ::set-output name=SOURCE_TAG::${GITHUB_REF/refs\/tags\//}
+#        shell: bash
+#      - name: upload to gitlab
+#        env:
+#          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+#          OS: ${{ matrix.os }}
+#          SOURCE_TAG: ${{ steps.get_version.outputs.SOURCE_TAG }}
+#        shell: bash
+#        run: |
+#          curl -f --user ignored:$GITLAB_TOKEN --upload-file target/x86_64-unknown-linux-musl/debian/automattermostatus_*_amd64.deb https://gitlab.com/api/v4/projects/30645379/packages/generic/binaries/"${SOURCE_TAG}/automattermostatus_${SOURCE_TAG}_amd64.deb"
