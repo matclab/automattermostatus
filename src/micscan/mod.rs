@@ -5,6 +5,8 @@ use tracing::{debug, error, info};
 mod linux;
 #[cfg(target_os = "macos")]
 mod osx;
+#[cfg(any(test, target_os = "macos"))]
+mod osx_parse;
 #[cfg(target_os = "windows")]
 mod windows;
 
