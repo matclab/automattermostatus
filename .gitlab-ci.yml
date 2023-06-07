@@ -80,13 +80,14 @@ test-linux:
   script:
     - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
     - "apt-get update && apt-get install -y libasound2-dev libpulse0"
-    - cargo test -- -Z unstable-options --format json --report-time | .cargo/bin/cargo2junit > tests.xml
-  artifacts:
-    paths:
-      - tests.xml
-    when: always
-    reports:
-      junit: tests.xml
+    - cargo test #-- -Z unstable-options --format json --report-time | .cargo/bin/cargo2junit > tests.xml
+      # TODO use https://nexte.st/book/junit.html
+#  artifacts:
+#    paths:
+#      - tests.xml
+#    when: always
+#    reports:
+#      junit: tests.xml
 
 test-linux-beta:
   image: instrumentisto/rust:beta
@@ -96,23 +97,24 @@ test-linux-beta:
   script:
     - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
     - "apt-get update && apt-get install -y libasound2-dev libpulse0"
-    - cargo test -- -Z unstable-options --format json --report-time | .cargo/bin/cargo2junit > tests.xml
-  artifacts:
-    paths:
-      - tests.xml
-    expire_in: 7 day
-    when: always
-    reports:
-      junit: tests.xml
+    - cargo test #-- -Z unstable-options --format json --report-time | .cargo/bin/cargo2junit > tests.xml
+#  artifacts:
+#    paths:
+#      - tests.xml
+#    expire_in: 7 day
+#    when: always
+#    reports:
+#      junit: tests.xml
 
 .test-linux-nightly:
   stage: build
   before_script:
-    - if [ ! -x .cargo/bin/cargo2junit ] then cargo install cargo2junit; fi
+    - if [ ! -x .cargo/bin/cargo2junit ] ; then cargo install cargo2junit; fi
   script:
     - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
-    - "apt-get install -y libasound2-dev libpulse0"
+    - "apt-get update && apt-get install -y libasound2-dev libpulse0"
     - cargo +nightly test -- -Z unstable-options --format json --report-time | .cargo/bin/cargo2junit > tests.xml
+  allow_failure: true
   artifacts:
     paths:
       - tests.xml
