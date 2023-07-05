@@ -139,10 +139,10 @@ test-linux-beta:
         - target/release/automattermostatus.exe
 
 code-coverage:
-  image: xd009642/tarpaulin:develop-nightly
+  image: xd009642/tarpaulin
   script:
     - "apt-get update && apt-get install -y libasound2-dev libpulse0"
-    - cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --coveralls $COVERALLS_TOKEN 
+    - cargo tarpaulin --verbose --all-features --workspace --timeout 120 --coveralls $COVERALLS_TOKEN 
   coverage: '/\d+.\d+% coverage, \d+\/\d+ lines covered/'
   interruptible: true
 
