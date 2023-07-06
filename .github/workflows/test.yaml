@@ -12,18 +12,25 @@ jobs:
 
 
   test:
-    name: Test linux, windows, macos
+    name: Tests
     strategy:
       matrix:
         os:
         - ubuntu-latest
         - windows-latest
         - macOS-latest
+        experimental: [false]
         rust:
           - stable
-          - beta
-          - nightly
+        include:
+          - rust: beta
+            os: ubuntu-latest
+            experimental: true
+          - rust: nightly
+            os: ubuntu-latest
+            experimental: true
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v2
