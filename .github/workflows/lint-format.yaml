@@ -14,12 +14,10 @@ jobs:
       - name: Setup | Checkout
         uses: actions/checkout@v2
       - name: Setup | Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@0e66bd3e6b38ec0ad5312288c83e47c143e6b09e
         with:
           toolchain: stable
-          profile: minimal
           components: rustfmt
-          override: true
       - uses: actions/cache@v2
         with:
           path: |
@@ -40,12 +38,10 @@ jobs:
       - name: Setup | Checkout
         uses: actions/checkout@v2
       - name: Setup | Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@0e66bd3e6b38ec0ad5312288c83e47c143e6b09e
         with:
           toolchain: stable
-          profile: minimal
           components: clippy
-          override: true
       - uses: actions/cache@v2
         with:
           path: |
