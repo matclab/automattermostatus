@@ -1,3 +1,7 @@
+# v0.2.3 
+Add feature to set the status to *do not disturb* when the microphone is used
+by configured applications for windows platform 
+
 # v0.2.2 
 
 Add feature to set the status to *do not disturb* when the microphone is used
