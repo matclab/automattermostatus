@@ -3,8 +3,7 @@ lang: en
 ---
 # auto*mat-termo-st*atus
 Automate your mattermost custom status with the help of visible Wi-Fi SSID and
-set your status to *do not disturb* when in visio (i.e. when a choosen
-application is using your microphone — linux and windows only for now)
+set your status to *do not disturb* when in visio.
 
 Development site is hosted on [gitlab](https://gitlab.com/matclab/automattermostatus).
 
@@ -15,7 +14,7 @@ page](https://gitlab.com/matclab/automattermostatus/-/releases).
 Here after is the command line help.
 <!-- `$ target/debug/automattermostatus --help` as text -->
 ```text
-automattermostatus 0.2.3
+automattermostatus 0.2.4
 Automate mattermost status with the help of wifi network
 
 Use current visible wifi SSID to automate your mattermost status. This program is meant to either be running in

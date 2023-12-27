@@ -1,3 +1,7 @@
+# v0.2.4 
+Add feature to set the status to *do not disturb* when the microphone is used
+by configured applications for OsX platform 
+
 # v0.2.3 
 Add feature to set the status to *do not disturb* when the microphone is used
 by configured applications for windows platform 
@@ -12,7 +16,7 @@ Update dependencies.
 
 # v0.2.1 
 
-Tentative fix for #2 where mattermosr instance does not always take the 
+Tentative fix for #2 where mattermost instance does not always take the 
 custom status into account despite returning 200.
 
 # v0.2.0 
