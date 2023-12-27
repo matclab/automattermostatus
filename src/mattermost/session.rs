@@ -195,9 +195,7 @@ impl BaseSession for SessionWithCredentials {
             password: self.password.clone(),
         })?)?;
         let Some(token) = response.header("Token") else {
-            return Err(anyhow!(
-                "Login authentication failed"
-            ));
+            return Err(anyhow!("Login authentication failed"));
         };
         let token = token.to_string();
         let json: serde_json::Value = response.into_json()?;
@@ -218,7 +216,7 @@ impl BaseSession for SessionWithCredentials {
 impl LoggedSession {
     /// relog in case of a short lived session token obtained wia login/password
     pub fn relogin(&mut self) -> Result<&mut LoggedSession> {
-        let (Some(password),Some(user)) = (self.password.clone(), self.user.clone()) else {
+        let (Some(password), Some(user)) = (self.password.clone(), self.user.clone()) else {
             // No login/password, we bail out without doing anything.
             return Ok(self);
         };
@@ -229,9 +227,7 @@ impl LoggedSession {
             password,
         })?)?;
         let Some(token) = response.header("Token") else {
-            return Err(anyhow!(
-                "Login authentication failed"
-            ));
+            return Err(anyhow!("Login authentication failed"));
         };
         self.token = token.to_string();
         Ok(self)
