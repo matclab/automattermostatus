@@ -1,6 +1,9 @@
 ---
 lang: en
 ---
+
+[![](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/matclab/donate)
+
 # auto*mat-termo-st*atus
 Automate your mattermost custom status with the help of visible Wi-Fi SSID and
 set your status to *do not disturb* when in visio.
@@ -288,6 +291,8 @@ Unless you explicitly state otherwise, any contribution intentionally
 submitted for inclusion in the work by you, as defined in the Apache-2.0
 license, shall be licensed as above, without any additional terms or
 conditions.
+
+
 
 ### Issues
 You may open issues or feature requests on [the gitlab issue
