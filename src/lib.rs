@@ -66,12 +66,18 @@ pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMCustomStatus>> 
 }
 
 /// Create [`Session`] according to `args.secret_type`.
-pub fn create_session(args: &Args) -> Result<LoggedSession> {
+pub fn create_session(args: &Args) -> LoggedSession {
     args.mm_url.as_ref().expect("Mattermost URL is not defined");
     args.secret_type
         .as_ref()
         .expect("Internal Error: secret_type is not defined");
     args.mm_secret.as_ref().expect("Secret is not defined");
+    let delay_duration = time::Duration::new(
+        args.delay
+            .expect("Internal error: args.delay shouldn't be None")
+            .into(),
+        0,
+    );
     let mut session = Session::new(args.mm_url.as_ref().unwrap());
     let mut session: Box<dyn BaseSession> = match args.secret_type.as_ref().unwrap() {
         SecretType::Password => Box::new(session.with_credentials(
@@ -80,9 +86,16 @@ pub fn create_session(args: &Args) -> Result<LoggedSession> {
         )),
         SecretType::Token => Box::new(session.with_token(args.mm_secret.as_ref().unwrap())),
     };
-    let res = session.login();
-    debug!("LoggedSession {:?}", res);
-    res
+    loop {
+        let res = session.login();
+        if let Ok(session) = res {
+            debug!("LoggedSession {:?}", session);
+            return session;
+        } else {
+            error!("Failed to access mattermost API {:?}", res);
+            sleep(delay_duration);
+        }
+    }
 }
 
 /// Main application loop, looking for a known SSID and updating
@@ -113,7 +126,7 @@ pub fn get_wifi_and_update_status_loop(
     } else {
         info!("Wifi is enabled");
     }
-    let mut session = create_session(&args)?;
+    let mut session = create_session(&args);
     let mut micusage = &mut micscan::MicUsage::new();
     loop {
         if !&args.is_off_time() {

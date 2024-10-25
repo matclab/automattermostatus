@@ -1,3 +1,7 @@
+# v0.2.5 
+Correct bug #11 where automattermostatus exit with an error when the network
+is not operational.
+
 # v0.2.4 
 Add feature to set the status to *do not disturb* when the microphone is used
 by configured applications for OsX platform 
