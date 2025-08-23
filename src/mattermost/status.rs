@@ -22,17 +22,19 @@ pub enum MMSError {
     LoginError(#[from] anyhow::Error),
 }
 
+type ResponseStatus = u16;
+
 trait MMSendable {
     fn _send_at_once(
         &self,
         session: &LoggedSession,
         api_path: &str,
-    ) -> Result<ureq::Response, ureq::Error>;
+    ) -> Result<ResponseStatus, ureq::Error>;
     fn send_at(
         &mut self,
         session: &mut LoggedSession,
         api_path: &str,
-    ) -> Result<ureq::Response, MMSError>;
+    ) -> Result<ResponseStatus, MMSError>;
     fn to_json(&self) -> Result<String, MMSError>;
     #[allow(unused)]
     fn set_user_id(&mut self, user_id: String) {
@@ -56,18 +58,19 @@ where
         &self,
         session: &LoggedSession,
         api_path: &str,
-    ) -> Result<ureq::Response, ureq::Error> {
+    ) -> Result<ResponseStatus, ureq::Error> {
         let token = session.token.clone();
         let uri = session.base_uri.to_owned() + api_path;
         debug!("Sending {:?} to {}", self, uri);
-        ureq::put(&uri)
-            .set("Authorization", &("Bearer ".to_owned() + &token))
+        let resp = ureq::put(&uri)
+            .header("Authorization", &("Bearer ".to_owned() + &token))
             .send_json(serde_json::to_value(self).unwrap_or_else(|e| {
                 panic!(
                     "Serialization of MMCustomStatus '{:?}' failed with {:?}",
                     &self, &e
                 )
-            }))
+            }))?;
+        Ok(resp.status().as_u16())
     }
 
     /// Send self as json, trying to login once in case of 401 failure.
@@ -76,11 +79,11 @@ where
         &mut self,
         session: &mut LoggedSession,
         api_path: &str,
-    ) -> Result<ureq::Response, MMSError> {
+    ) -> Result<ResponseStatus, MMSError> {
         debug!("Post status: {}", self.to_owned().to_json()?);
         match self._send_at_once(session, api_path) {
-            Ok(response) => Ok(response),
-            Err(ureq::Error::Status(code, response)) => {
+            Ok(status) => Ok(status),
+            Err(ureq::Error::StatusCode(code)) => {
                 /* the server returned an unexpected status
                 code (such as 400, 500 etc) */
                 if code == 401 {
@@ -89,7 +92,7 @@ where
                     //self.set_user_id(loggedsession.user_id);
                     self._send_at_once(session, api_path)
                 } else {
-                    Err(ureq::Error::Status(code, response))
+                    Err(ureq::Error::StatusCode(code))
                 }
             }
             Err(e) => Err(e),
@@ -210,7 +213,7 @@ impl MMCustomStatus {
         // let dt: NaiveDateTime = NaiveDate::from_ymd(2016, 7, 8).and_hms(9, 10, 11);
     }
     /// Send self as json, trying to login once in case of 401 failure.
-    pub fn send(&mut self, session: &mut LoggedSession) -> Result<ureq::Response, MMSError> {
+    pub fn send(&mut self, session: &mut LoggedSession) -> Result<ResponseStatus, MMSError> {
         self.send_at(session, "/api/v4/users/me/status/custom")
     }
 }
@@ -252,6 +255,7 @@ mod send_should {
         });
 
         // Send an HTTP request to the mock server. This simulates your code.
+        #[allow(unused_allocation)]
         let mut session = Box::new(Session::new(&server.url("")).with_token("token")).login()?;
         let resp = mmstatus.send(&mut session)?;
 
@@ -259,7 +263,7 @@ mod send_should {
         login_mock.assert();
         server_mock.assert();
         // Ensure the mock server did respond as specified.
-        assert_eq!(resp.status(), 200);
+        assert_eq!(resp, 200);
         Ok(())
     }
     #[test]
@@ -293,6 +297,7 @@ mod send_should {
         });
 
         // Send an HTTP request to the mock server. This simulates your code.
+        #[allow(unused_allocation)]
         let mut session = Box::new(Session::new(&server.url("")).with_token("token")).login()?;
         let resp = mmstatus.send(&mut session);
         assert!(resp.is_err());

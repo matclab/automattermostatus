@@ -159,9 +159,10 @@ impl BaseSession for SessionWithToken {
     fn login(&mut self) -> Result<LoggedSession> {
         let uri = self.base_uri.to_owned() + "/api/v4/users/me";
         let json: serde_json::Value = ureq::get(&uri)
-            .set("Authorization", &("Bearer ".to_owned() + &self.token))
+            .header("Authorization", &("Bearer ".to_owned() + &self.token))
             .call()?
-            .into_json()?;
+            .body_mut()
+            .read_json()?;
         debug!("User info: {:?}", json);
         Ok(LoggedSession {
             base_uri: mem::take(&mut self.base_uri),
@@ -190,15 +191,15 @@ impl BaseSession for SessionWithCredentials {
 
     fn login(&mut self) -> Result<LoggedSession> {
         let uri = self.base_uri.to_owned() + "/api/v4/users/login";
-        let response = ureq::post(&uri).send_json(serde_json::to_value(LoginData {
+        let mut response = ureq::post(&uri).send_json(serde_json::to_value(LoginData {
             login_id: self.user.clone(),
             password: self.password.clone(),
         })?)?;
-        let Some(token) = response.header("Token") else {
+        let Some(token) = response.headers().get("Token") else {
             return Err(anyhow!("Login authentication failed"));
         };
-        let token = token.to_string();
-        let json: serde_json::Value = response.into_json()?;
+        let token = token.to_str()?.to_string();
+        let json: serde_json::Value = response.body_mut().read_json()?;
         let user_id = json["id"]
             .as_str()
             .ok_or(anyhow!("Received id is not a string"))?
@@ -226,10 +227,10 @@ impl LoggedSession {
             login_id: user,
             password,
         })?)?;
-        let Some(token) = response.header("Token") else {
+        let Some(token) = response.headers().get("Token") else {
             return Err(anyhow!("Login authentication failed"));
         };
-        self.token = token.to_string();
+        self.token = token.to_str()?.to_string();
         Ok(self)
     }
 }

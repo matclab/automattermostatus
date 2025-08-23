@@ -55,7 +55,7 @@ pub fn get_cache(dir: Option<PathBuf>) -> Result<Cache> {
 pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMCustomStatus>> {
     let mut res = HashMap::new();
     for s in &args.status {
-        let sc: WifiStatusConfig = s.parse().with_context(|| format!("Parsing {}", s))?;
+        let sc: WifiStatusConfig = s.parse().with_context(|| format!("Parsing {s}"))?;
         debug!("Adding : {:?}", sc);
         res.insert(
             Location::Known(sc.wifi_string),
@@ -222,7 +222,7 @@ mod prepare_status_should {
     #[test]
     fn prepare_expected_status() -> Result<()> {
         let args = Args {
-            status: vec!["a::b::c", "d::e::f", "::off::off text"]
+            status: ["a::b::c", "d::e::f", "::off::off text"]
                 .iter()
                 .map(|s| s.to_string())
                 .collect(),

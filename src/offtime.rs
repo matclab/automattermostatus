@@ -123,7 +123,7 @@ mod is_off_should {
         mock.expect_now().times(1).returning(|| {
             NaiveDate::from_isoywd_opt(2015, 1, Weekday::Tue).expect("Unable to convert date")
         });
-        assert_eq!(leave.is_off_at_date(mock), false);
+        assert!(!leave.is_off_at_date(mock));
         Ok(())
     }
 
@@ -135,7 +135,7 @@ mod is_off_should {
         mock.expect_now().times(1).returning(|| {
             NaiveDate::from_isoywd_opt(2015, 1, Weekday::Tue).expect("Unable to convert date")
         });
-        assert_eq!(leave.is_off_at_date(mock), true);
+        assert!(leave.is_off_at_date(mock));
         Ok(())
     }
 
@@ -148,14 +148,14 @@ mod is_off_should {
         mock.expect_now().times(1).returning(|| {
             NaiveDate::from_isoywd_opt(2015, 15, Weekday::Wed).expect("Unable to convert date")
         });
-        assert_eq!(leave.is_off_at_date(mock), true);
+        assert!(leave.is_off_at_date(mock));
 
         leave.insert(Weekday::Thu, Parity::EvenWeek);
         let mut mock = MockNow::new();
         mock.expect_now().times(1).returning(|| {
             NaiveDate::from_isoywd_opt(2015, 16, Weekday::Thu).expect("Unable to convert date")
         });
-        assert_eq!(leave.is_off_at_date(mock), true);
+        assert!(leave.is_off_at_date(mock));
 
         Ok(())
     }
@@ -168,14 +168,14 @@ mod is_off_should {
         mock.expect_now().times(1).returning(|| {
             NaiveDate::from_isoywd_opt(2015, 15, Weekday::Fri).expect("Unable to convert date")
         });
-        assert_eq!(leave.is_off_at_date(mock), false);
+        assert!(!leave.is_off_at_date(mock));
 
         leave.insert(Weekday::Sun, Parity::OddWeek);
         let mut mock = MockNow::new();
         mock.expect_now().times(1).returning(|| {
             NaiveDate::from_isoywd_opt(2015, 16, Weekday::Sun).expect("Unable to convert date")
         });
-        assert_eq!(leave.is_off_at_date(mock), false);
+        assert!(!leave.is_off_at_date(mock));
         Ok(())
     }
 }

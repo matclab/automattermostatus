@@ -6,7 +6,6 @@ use tracing::warn;
 /// for the current day at time "hh:mm"
 ///
 /// If `mm` is not parsable we return a datetime set at `hh:00`.
-
 pub fn parse_from_hmstr(time_str: &Option<String>) -> Option<NaiveDateTime> {
     if let Some(ref s) = time_str {
         let splitted: Vec<&str> = s.split(':').collect();

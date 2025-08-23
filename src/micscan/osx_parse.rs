@@ -1,18 +1,28 @@
+use anyhow::Context;
 use quick_xml::events::{BytesText, Event};
 use quick_xml::Reader;
 use tracing::{debug, error};
 
+#[allow(dead_code)]
 pub(crate) fn extract_mic_in_use(ioreg_output: &str) -> bool {
     usb_mic_in_use(ioreg_output)
 }
 
 fn node_has_engine_state(e: &BytesText, reader: &mut Reader<&[u8]>) -> bool {
-    if e.unescape_and_decode(&reader).unwrap() == "IOAudioEngineState" {
+    if e.xml_content()
+        .context("Reading xml <key> content")
+        .unwrap()
+        == "IOAudioEngineState"
+    {
         let mut buf = Vec::new();
-        let _ = reader.read_event(&mut buf); // </key>
-        let _ = reader.read_event(&mut buf); // <integer>
-        if let Ok(Event::Text(e)) = reader.read_event(&mut buf) {
-            if e.unescape_and_decode(&reader).unwrap() == "1" {
+        let _ = reader.read_event_into(&mut buf); // </key>
+        let _ = reader.read_event_into(&mut buf); // <integer>
+        if let Ok(Event::Text(e)) = reader.read_event_into(&mut buf) {
+            if e.xml_content()
+                .context("Reading xml <integer content")
+                .unwrap()
+                == "1"
+            {
                 debug!("Found IOAudioEngineState = 1");
                 true
             } else {
@@ -31,7 +41,7 @@ fn node_has_engine_state(e: &BytesText, reader: &mut Reader<&[u8]>) -> bool {
 pub(crate) fn usb_mic_in_use(ioreg_output: &str) -> bool {
     debug!("usb_mic_in_use");
     let mut reader = Reader::from_str(ioreg_output);
-    reader.trim_text(true);
+    reader.config_mut().trim_text(true);
 
     let mut buf = Vec::new();
     let mut dictlevel: i8 = 0;
@@ -43,8 +53,8 @@ pub(crate) fn usb_mic_in_use(ioreg_output: &str) -> bool {
     // valeur quelconque, et la clé IOAudioEngineState avec la valeur 1 qui dit qu’il est actif.
     // The `Reader` does not implement `Iterator` because it outputs borrowed data (`Cow`s)
     loop {
-        match reader.read_event(&mut buf) {
-            Ok(Event::Start(ref e)) => match e.name() {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(ref e)) => match e.name().as_ref() {
                 b"dict" => {
                     dictlevel += 1;
                     debug!(
@@ -54,11 +64,13 @@ pub(crate) fn usb_mic_in_use(ioreg_output: &str) -> bool {
                 }
                 b"key" => {
                     debug!("key");
-                    if let Ok(Event::Text(e)) = reader.read_event(&mut buf) {
+                    if let Ok(Event::Text(e)) = reader.read_event_into(&mut buf) {
                         if !audioenginestate_found {
                             audioenginestate_found = node_has_engine_state(&e, &mut reader);
                         }
-                        if e.unescape_and_decode(&reader).unwrap()
+                        if e.xml_content()
+                            .context("Reading xml <key> content")
+                            .unwrap()
                             == "IOAudioEngineInputSampleOffset"
                         {
                             debug!("Found IOAudioEngineInputSampleOffset");
@@ -68,8 +80,8 @@ pub(crate) fn usb_mic_in_use(ioreg_output: &str) -> bool {
                 }
                 _ => (),
             },
-            Ok(Event::End(ref e)) => match e.name() {
-                b"dict" => {
+            Ok(Event::End(ref e)) => {
+                if e.name().as_ref() == b"dict" {
                     dictlevel -= 1;
                     debug!(
                         "End dict {} {} {}",
@@ -84,8 +96,7 @@ pub(crate) fn usb_mic_in_use(ioreg_output: &str) -> bool {
                         audioenginestate_found = false;
                     }
                 }
-                _ => (),
-            },
+            }
             Ok(Event::Eof) => break,
             Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
             _ => (), // There are several other `Event`s we do not consider here
@@ -105,7 +116,7 @@ mod tests {
         #[test]
         fn find_mic_connected() -> Result<()> {
             let res = include_str!("macscanmic.xml");
-            assert_eq!(usb_mic_in_use(res), true);
+            assert!(usb_mic_in_use(res));
             Ok(())
         }
     }

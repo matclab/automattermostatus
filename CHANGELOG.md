@@ -1,3 +1,8 @@
+# v0.2.6 
+
+Updated all dependencies. This should notably provide better keyring support
+on all plateforms.
+
 # v0.2.5 
 Correct bug #11 where automattermostatus exit with an error when the network
 is not operational.

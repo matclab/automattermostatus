@@ -352,9 +352,9 @@ impl Args {
     pub fn update_secret_with_keyring(mut self) -> Result<Self> {
         if let Some(user) = &self.mm_user {
             if let Some(service) = &self.keyring_service {
-                let keyring = keyring::Keyring::new(service, user);
+                let keyring = keyring::Entry::new(service, user)?;
                 let secret = keyring.get_password().with_context(|| {
-                    format!("Querying OS keyring (user: {}, service: {})", user, service)
+                    format!("Querying OS keyring (user: {user}, service: {service})")
                 })?;
                 self.mm_secret = Some(secret);
             } else {
@@ -380,7 +380,7 @@ impl Args {
                 .output()
                 .context(format!("Error when running {}", &command))?;
             let secret = String::from_utf8_lossy(&output.stdout);
-            if secret.len() == 0 {
+            if secret.is_empty() {
                 bail!("command '{}' returns nothing", &command);
             }
             // /!\ Do not spit secret on stdout on released binary.
@@ -404,7 +404,7 @@ impl Args {
         if !conf_file.exists() {
             info!("Write {:?} default config file", &conf_file);
             fs::write(&conf_file, toml::to_string(&Args::default())?)
-                .unwrap_or_else(|_| panic!("Unable to write default config file {:?}", conf_file));
+                .unwrap_or_else(|_| panic!("Unable to write default config file {conf_file:?}"));
         }
 
         let config_args: Args = Figment::from(Toml::file(&conf_file))

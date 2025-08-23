@@ -1,33 +1,36 @@
+use anyhow::Context;
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use tracing::error;
 
 pub(crate) fn extract_airport_ssid(airport_output: &str) -> Vec<String> {
     let mut reader = Reader::from_str(airport_output);
-    reader.trim_text(true);
+    reader.config_mut().trim_text(true);
 
     let mut txt = Vec::new();
     let mut buf = Vec::new();
 
     // The `Reader` does not implement `Iterator` because it outputs borrowed data (`Cow`s)
     loop {
-        match reader.read_event(&mut buf) {
+        match reader.read_event_into(&mut buf) {
             Ok(Event::Start(ref e)) => {
-                match e.name() {
-                    b"key" => {
-                        if let Ok(Event::Text(e)) = reader.read_event(&mut buf) {
-                            if e.unescape_and_decode(&reader).unwrap() == "SSID_STR" {
-                                let _ = reader.read_event(&mut buf); // </key>
-                                let _ = reader.read_event(&mut buf); // </string>
-                                if let Ok(Event::Text(e)) = reader.read_event(&mut buf) {
-                                    txt.push(e.unescape_and_decode(&reader).unwrap());
-                                } else {
-                                    error!("Bad xml structure")
-                                }
+                if e.name().as_ref() == b"key" {
+                    if let Ok(Event::Text(e)) = reader.read_event_into(&mut buf) {
+                        if e.xml_content().context("Reading xml 'key' tag").unwrap() == "SSID_STR" {
+                            let _ = reader.read_event(); // </key>
+                            let _ = reader.read_event(); // <string>
+                            if let Ok(Event::Text(e)) = reader.read_event_into(&mut buf) {
+                                txt.push(
+                                    e.xml_content()
+                                        .context("Reading xml 'SSID_STR' strings content")
+                                        .unwrap()
+                                        .to_string(),
+                                );
+                            } else {
+                                error!("Bad xml structure")
                             }
                         }
                     }
-                    _ => (),
                 }
             }
             Ok(Event::Eof) => break,
