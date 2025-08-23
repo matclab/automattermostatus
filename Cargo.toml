@@ -55,21 +55,21 @@ path= "src/main.rs"
 debug = 0
 
 [dependencies]
-anyhow = "1.0.77"
+anyhow = "1.0.99"
 paw = "1.0.0"
 structopt = { version = "0.3.26", features = ["paw", "wrap_help", "color"], default-features = false }
-thiserror = "1.0.52"
-serde = { version = "1.0.193", features = ["derive"] }
-serde_json = "1.0.108"
-tracing = { version = "0.1.40", features = ["log"] }
-tracing-subscriber = { version = "0.3.18", features = ["registry", "tracing-log", "ansi", "fmt", "smallvec", "env-filter"], default-features = false }
-chrono = { version = "0.4.31", features = ["serde"] }
+thiserror = "1.0.69"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.143"
+tracing = { version = "0.1.41", features = ["log"] }
+tracing-subscriber = { version = "0.3.19", features = ["registry", "tracing-log", "ansi", "fmt", "smallvec", "env-filter"], default-features = false }
+chrono = { version = "0.4.41", features = ["serde"] }
 shell-words = "1.1.0"
-quick-xml = "0.22.0"
+quick-xml = "0.38.2"
 tracing-log = "0.1.4"
-figment = { version = "0.10.12", features = ["toml"] }
+figment = { version = "0.10.19", features = ["toml"] }
 directories-next = "2.0.0"
-ureq = { version = "2.9.1", features = ["json"] }
+ureq = { version = "2.12.1", features = ["json"] }
 toml = "0.5"
 keyring = "0.10.4"
 derivative = "2.2.0"
@@ -89,8 +89,8 @@ mktemp = "0.4.1"
 httpmock = "0.6.8"
 mockall = "0.11.4"
 rusty-hook = "0.11.2"
-test-log = { version = "0.2.14", default-features = false, features = ["trace"] }
-tracing-subscriber = { version = "0.3.18", features = [ "fmt",  "env-filter"], default-features = false }
+test-log = { version = "0.2.18", default-features = false, features = ["trace"] }
+tracing-subscriber = { version = "0.3.19", features = [ "fmt",  "env-filter"], default-features = false }
 
 #[source.crates-io]
 #replace-with = "vendored-sources"
