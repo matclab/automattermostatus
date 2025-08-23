@@ -1,0 +1,9 @@
+FROM rust:slim-bookworm	
+
+RUN apt-get update && apt-get install -y wine curl mingw-w64 \
+&&  rustup target add x86_64-pc-windows-gnu \
+&&  curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash \
+&&  cargo binstall cargo-zigbuild cargo-nextest  --secure \
+&&  rm /usr/local/cargo/bin/cargo-binstall \
+&&  rm -rf /var/lib/apt/lists/*
+

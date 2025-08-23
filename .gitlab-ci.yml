@@ -1,11 +1,17 @@
-image: rust
 variables:
+  IMAGE_VERSION: 1.1
   CARGO_HOME: $CI_PROJECT_DIR/.cargo
   PACKAGE_REGISTRY_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/binaries/${CI_COMMIT_TAG}/"
   WINDOWS_AMD64_BINARY: automattermostatus-windows-amd64.exe
   LINUX_AMD64_BINARY: automattermostatus-linux-amd64
   MACOS_AMD64_BINARY: automattermostatus-macos-amd64
+    # Enable faster processing of many files in a cache.
+  FF_USE_FASTZIP: "true"
+  CACHE_COMPRESSION_LEVEL: "fastest"
 
+
+default:
+  image: registry.gitlab.com/matclab/automattermostatus/buildandtest:${IMAGE_VERSION}
 
 stages:
   - build
@@ -14,14 +20,14 @@ stages:
 
 .shared_windows_runners:
   tags:
-  - shared-windows
-  - windows
-  - windows-1809
+    - saas-windows-medium-amd64
+  image: 
+
 
 .macos_buildcloud_runners:
   tags:
-    - shared-macos-amd64
-  image: macos-11-xcode-12
+    - saas-macos-medium-m1
+  image: macos-14-xcode-15
 
 cache:
   key: $CI_COMMIT_REF_NAME-$CI_JOB_NAME
@@ -33,32 +39,10 @@ style:
   stage: build
   script:
     - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
-    - rustup component add clippy rustfmt
     - rustc --version
     - cargo version
     - cargo fmt -- --check
-    - "apt-get update && apt-get install -y libasound2-dev"
     - cargo clippy
-
-.build-windows: # done on github for now
-  variables:
-    RUSTFLAGS: "-D warnings" # Disallow warnings
-  stage: build
-  extends: .shared_windows_runners
-  rules:  # We don't build for daily CI as it is too long and is cargo checked on github actions anyway
-    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+.*$/
-  before_script:
-    - choco feature enable -n=allowGlobalConfirmation
-    - choco install rust gcc
-  script:
-    - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
-    - cargo test
-    - cargo build --release 
-  artifacts:
-    paths:
-      - target/release/automattermostatus.exe
-    expire_in: 7 day
-
 
 build-linux:
   stage: build
@@ -66,7 +50,6 @@ build-linux:
     RUSTFLAGS: "-D warnings" # Disallow warnings
   script:
     - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
-    - "apt-get update && apt-get install -y libasound2-dev libpulse0"
     - cargo build --release 
   artifacts:
     paths:
@@ -75,53 +58,43 @@ build-linux:
 
 test-linux:
   stage: build
-  before_script:
-    - if [ ! -x .cargo/bin/cargo2junit ] ; then cargo install cargo2junit; fi
   script:
     - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
-    - "apt-get update && apt-get install -y libasound2-dev libpulse0"
-    - cargo test #-- -Z unstable-options --format json --report-time | .cargo/bin/cargo2junit > tests.xml
-      # TODO use https://nexte.st/book/junit.html
-#  artifacts:
-#    paths:
-#      - tests.xml
-#    when: always
-#    reports:
-#      junit: tests.xml
+    - cargo nextest run --profile ci
+  artifacts:
+    paths:
+      - target/nextest/ci/junit.xml
+    when: always
+    reports:
+      junit: target/nextest/ci/junit.xml
+    expire_in: 7 day
 
 test-linux-beta:
-  image: instrumentisto/rust:beta
   stage: build
-  before_script:
-    - if [ ! -x .cargo/bin/cargo2junit ] ;  then cargo install cargo2junit; fi
   script:
     - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
-    - "apt-get update && apt-get install -y libasound2-dev libpulse0"
-    - cargo test #-- -Z unstable-options --format json --report-time | .cargo/bin/cargo2junit > tests.xml
-#  artifacts:
-#    paths:
-#      - tests.xml
-#    expire_in: 7 day
-#    when: always
-#    reports:
-#      junit: tests.xml
+    - cargo +beta nextest run --profile ci 
+  artifacts:
+    paths:
+      - target/nextest/ci/junit.xml
+    when: always
+    reports:
+      junit: target/nextest/ci/junit.xml
+    expire_in: 7 day
 
-.test-linux-nightly:
+test-linux-nightly:
   stage: build
-  before_script:
-    - if [ ! -x .cargo/bin/cargo2junit ] ; then cargo install cargo2junit; fi
   script:
     - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
-    - "apt-get update && apt-get install -y libasound2-dev libpulse0"
-    - cargo +nightly test -- -Z unstable-options --format json --report-time | .cargo/bin/cargo2junit > tests.xml
+    - cargo +nightly nextest run --profile ci
   allow_failure: true
   artifacts:
     paths:
-      - tests.xml
-    expire_in: 7 day
+      - target/nextest/ci/junit.xml
     when: always
     reports:
-      junit: tests.xml
+      junit: target/nextest/ci/junit.xml
+    expire_in: 7 day
 
 # Not enabled for now
 .build-mac:
@@ -138,30 +111,8 @@ test-linux-beta:
       paths:
         - target/release/automattermostatus.exe
 
-code-coverage:
-  image: xd009642/tarpaulin
-  script:
-    - "apt-get update && apt-get install -y libasound2-dev libpulse0"
-    - cargo tarpaulin --verbose --all-features --workspace --timeout 120 --coveralls $COVERALLS_TOKEN 
-  coverage: '/\d+.\d+% coverage, \d+\/\d+ lines covered/'
-  interruptible: true
 
 
-
-.upload: # done on github for now
-  stage: release
-  needs: [build-linux, build-windows]
-  dependencies: [build-linux, build-windows]
-  image: curlimages/curl:latest
-  rules:
-    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+.*$/
-  script:
-    - env
-    - echo "$PACKAGE_REGISTRY_URL"
-    - cp target/release/automattermostatus ${LINUX_AMD64_BINARY}
-    - cp target/release/automattermostatus.exe ${WINDOWS_AMD64_BINARY}
-    - 'curl --fail-with-body --user gitlab-uplaod:$GITLAB_PACKAGE_TOKEN --upload-file ${WINDOWS_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/${WINDOWS_AMD64_BINARY}'
-    - 'curl --fail-with-body --user gitlab-uplaod:$GITLAB_PACKAGE_TOKENCI_JOB_TOKEN --upload-file ${LINUX_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/${LINUX_AMD64_BINARY}'
 
 wait-upload:
   stage: release
@@ -194,7 +145,96 @@ release:
           url: ${PACKAGE_REGISTRY_URL}${WINDOWS_AMD64_BINARY}
         - name: 'MacOS build : ${MACOS_AMD64_BINARY}'
           url: ${PACKAGE_REGISTRY_URL}${MACOS_AMD64_BINARY}
-#        - name: 'Debian package : automattermostatus_${CI_COMMIT_TAG}_amd64.deb'
-#          url: ${PACKAGE_REGISTRY_URL}automattermostatus_${CI_COMMIT_TAG}_amd64.deb'
+        - name: 'Debian package : automattermostatus_${CI_COMMIT_TAG}_amd64.deb'
+          url: ${PACKAGE_REGISTRY_URL}automattermostatus_${CI_COMMIT_TAG}_amd64.deb'
 
 
+package:
+  stage: release
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+.*$/
+  image: registry.gitlab.com/matclab/automattermostatus/package:${IMAGE_VERSION}
+  script:
+    - cargo deb
+
+### Non used job
+#
+.upload: # done on github for now
+  stage: release
+  needs: [build-linux, build-windows]
+  dependencies: [build-linux, build-windows]
+  image: curlimages/curl:latest
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+.*$/
+  script:
+    - env
+    - echo "$PACKAGE_REGISTRY_URL"
+    - cp target/release/automattermostatus ${LINUX_AMD64_BINARY}
+    - cp target/release/automattermostatus.exe ${WINDOWS_AMD64_BINARY}
+    - 'curl --fail-with-body --user gitlab-uplaod:$GITLAB_PACKAGE_TOKEN --upload-file ${WINDOWS_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/${WINDOWS_AMD64_BINARY}'
+    - 'curl --fail-with-body --user gitlab-uplaod:$GITLAB_PACKAGE_TOKENCI_JOB_TOKEN --upload-file ${LINUX_AMD64_BINARY} ${PACKAGE_REGISTRY_URL}/${LINUX_AMD64_BINARY}'
+
+      
+.test-and-build-windows: # done on github for now
+  variables:
+    RUSTFLAGS: "-D warnings" # Disallow warnings
+  stage: build
+  extends: .shared_windows_runners
+    #rules:  # We don't build for daily CI as it is too long and is cargo checked on github actions anyway
+    #- if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+.*$/
+  before_script:
+    - choco feature enable -n=allowGlobalConfirmation
+    - choco install rust MinGW-w64
+    - Set-ExecutionPolicy Unrestricted -Scope Process; iex (iwr "https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.ps1").Content
+  script:
+    - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
+    - cargo binstall cargo-nextest --secure
+    - cargo run nextest --profile ci
+    - cargo build --release 
+  artifacts:
+    paths:
+      - target/release/automattermostatus.exe
+      - target/nextest/ci/junit.xml
+    expire_in: 7 day
+    reports:
+      junit: target/nextest/ci/junit.xml
+
+#### Not working jobs (for now) 
+.code-coverage:
+  script:
+    - cargo +nightly llvm-cov --no-report nextest
+    - cargo +nightly llvm-cov --no-report --doc
+    - cargo +nightly  llvm-cov report --doctests #--lcov --output-path lcov.info
+  coverage: /^TOTAL.*\s+(\d+\%)[^%]*$/
+  interruptible: true
+
+.build-windows:
+  image: registry.gitlab.com/matclab/automattermostatus/buildandtestwin:${IMAGE_VERSION}
+  stage: build
+  variables:
+    RUSTFLAGS: "-D warnings" # Disallow warnings
+  script:
+    - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
+    - cargo-zigbuild build --release --target x86_64-pc-windows-gnu 
+  artifacts:
+    paths:
+      - target/x86_64-pc-windows-gnu/release/automattermostatus.exe
+    expire_in: 7 day
+
+
+      # Essai de test windows avec wine. Ne marche pas
+.test-windows:
+  image: registry.gitlab.com/matclab/automattermostatus/buildandtestwin:${IMAGE_VERSION}
+  stage: build
+  variables:
+    CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUNNER: wine
+  script:
+    - sed -ie "/^rusty-hook/s/^/#/" Cargo.toml   # Remove rusty-hook from dev deps
+    - cargo nextest run --profile ci --target x86_64-pc-windows-gnu
+  artifacts:
+    paths:
+      - target/nextest/ci/junit.xml
+    when: always
+    reports:
+      junit: target/nextest/ci/junit.xml
+    expire_in: 7 day

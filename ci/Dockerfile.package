@@ -1,0 +1,7 @@
+FROM registry.gitlab.com/matclab/automattermostatus/buildandtest:latest
+
+RUN   curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash \
+&&  cargo binstall cargo-llvm-cov  --secure \
+&&  rm /usr/local/cargo/bin/cargo-binstall \
+&&  rm -rf /var/lib/apt/lists/*
+

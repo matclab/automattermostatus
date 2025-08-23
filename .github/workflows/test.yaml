@@ -38,7 +38,7 @@ jobs:
         uses: dtolnay/rust-toolchain@0e66bd3e6b38ec0ad5312288c83e47c143e6b09e
         with:
           toolchain: ${{ matrix.rust }}
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -50,7 +50,7 @@ jobs:
       - name: Install alsa lib on linux
         run: |
           sudo apt-get update 
-          sudo apt-get install libasound2-dev libpulse0
+          sudo apt-get install libasound2-dev libpulse0 pkg-config libdbus-1-dev
         if: matrix.os == 'ubuntu-latest'
 #      - name: Install alsa lib on macos
 #        run: |

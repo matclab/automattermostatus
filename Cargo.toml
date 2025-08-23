@@ -9,6 +9,7 @@ homepage = "https://gitlab.com/matclab/automattermostatus/"
 repository = "https://gitlab.com/matclab/automattermostatus/"
 description = "Automate your mattermost custom status with the help of visible wifi SSID."
 authors =  ["Mathieu Clabaut <mathieu@clabaut.net>"]
+#depends = ["libdbus-1", "libpulse0", "libasound2"]
 readme = "README.md" 
 include = [
     "src/**/*.rs",
