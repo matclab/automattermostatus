@@ -10,7 +10,7 @@ command = ["cargo", "check", "--color", "always"]
 need_stdout = false
 
 [jobs.windows]
-command = ["cross", "check", "--color", "always", "--target",
+command = ["cargo-zigbuild", "check", "--color", "always", "--all-targets",  "--target",
 "x86_64-pc-windows-gnu", "--target-dir", "/home/clabaut/p/projects/automattermostatus/target-cross"]
 need_stdout = false
 

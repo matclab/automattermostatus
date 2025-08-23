@@ -3,6 +3,10 @@
 Updated all dependencies. This should notably provide better keyring support
 on all plateforms.
 
+## Bug corrected
+- #17 which prevent some application using the microphone to be detected on
+  window
+
 # v0.2.5 
 Correct bug #11 where automattermostatus exit with an error when the network
 is not operational.

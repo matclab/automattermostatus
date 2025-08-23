@@ -292,7 +292,11 @@ submitted for inclusion in the work by you, as defined in the Apache-2.0
 license, shall be licensed as above, without any additional terms or
 conditions.
 
+### Development
 
+You shall use `cargo nextest` to run the tests locally as some of them,
+notably for windows, are not thread safe, and we use specific `nextest`
+configuration in `.config/nextest.toml` to ensure correct sequencing.
 
 ### Issues
 You may open issues or feature requests on [the gitlab issue

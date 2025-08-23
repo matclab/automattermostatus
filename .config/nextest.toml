@@ -1,0 +1,19 @@
+[test-groups]
+winreg = { max-threads = 1 }
+
+[profile.default]
+# Exit the test run after N failures, e.g. 5 failures. max-fail in configuration
+# is available starting cargo-nextest 0.9.89+.
+fail-fast = { max-fail = 5 }
+
+[[profile.default.overrides]]
+filter = 'test(micscan::windows)'
+platform = 'cfg(windows)'
+test-group = 'winreg'
+
+[profile.ci.junit]  # this can be some other profile, too
+path = "junit.xml"
+[[profile.ci.overrides]]
+filter = 'test(micscan::windows)'
+platform = 'cfg(windows)'
+test-group = 'winreg'
