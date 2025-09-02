@@ -263,7 +263,7 @@ You may either copy the `distrib/automattermostatus.desktop` in
 you may copy the *auttoolmostatus systemd unit*
 `distrib/automattermostatus.service` in `$HOME/.config/systemd/user` and do 
 ```sh
-systemctl status --user enable --now automattermostatus
+systemctl --user enable --now automattermostatus
 ```
 The logs are then visible with 
 ```sh
