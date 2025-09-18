@@ -5,6 +5,7 @@ variables:
   WINDOWS_AMD64_BINARY: automattermostatus-windows-amd64.exe
   LINUX_AMD64_BINARY: automattermostatus-linux-amd64
   MACOS_AMD64_BINARY: automattermostatus-macos-amd64
+  DEBIAN_BINARY: automattermostatus_${CI_COMMIT_TAG}_amd64.deb
     # Enable faster processing of many files in a cache.
   FF_USE_FASTZIP: "true"
   CACHE_COMPRESSION_LEVEL: "fastest"
@@ -126,7 +127,8 @@ wait-upload:
 
 release:
   stage: release
-  needs: [wait-upload]
+  needs: [wait-upload, package]
+  dependencies: [wait-upload, package]
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+.*$/
@@ -145,8 +147,8 @@ release:
           url: ${PACKAGE_REGISTRY_URL}${WINDOWS_AMD64_BINARY}
         - name: 'MacOS build : ${MACOS_AMD64_BINARY}'
           url: ${PACKAGE_REGISTRY_URL}${MACOS_AMD64_BINARY}
-        - name: 'Debian package : automattermostatus_${CI_COMMIT_TAG}_amd64.deb'
-          url: ${PACKAGE_REGISTRY_URL}automattermostatus_${CI_COMMIT_TAG}_amd64.deb'
+        - name: 'Debian package : ${DEBIAN_BINARY}'
+          url: ${PACKAGE_REGISTRY_URL}${DEBIAN_BINARY}
 
 
 package:
@@ -156,6 +158,7 @@ package:
   image: registry.gitlab.com/matclab/automattermostatus/package:${IMAGE_VERSION}
   script:
     - cargo deb
+    - 'curl --location --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --fail-with-body  --upload-file target/debian/automattermostatus*.deb  ${PACKAGE_REGISTRY_URL}${DEBIAN_BINARY}'
 
 ### Non used job
 #

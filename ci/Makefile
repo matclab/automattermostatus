@@ -15,10 +15,10 @@ docker: ### Build and push docker image with tag VERSION
 	docker build . -t registry.gitlab.com/matclab/automattermostatus/buildandtest:${VERSION}
 	docker tag registry.gitlab.com/matclab/automattermostatus/buildandtest:${VERSION} registry.gitlab.com/matclab/automattermostatus/buildandtest:latest
 	docker build . -f Dockerfile.package -t registry.gitlab.com/matclab/automattermostatus/package:${VERSION}
-	docker build . -f Dockerfile.wine -t registry.gitlab.com/matclab/automattermostatus/buildandtestwin:${VERSION}
+	#docker build . -f Dockerfile.wine -t registry.gitlab.com/matclab/automattermostatus/buildandtestwin:${VERSION}
 	${MAKE} push VERSION=${VERSION}
 push: ### Push docker package with VERSION
 	echo "${VERSION}"
 	docker push registry.gitlab.com/matclab/automattermostatus/buildandtest:${VERSION}
 	docker push registry.gitlab.com/matclab/automattermostatus/package:${VERSION}
-	docker push registry.gitlab.com/matclab/automattermostatus/buildandtestwin:${VERSION}
+	#docker push registry.gitlab.com/matclab/automattermostatus/buildandtestwin:${VERSION}
