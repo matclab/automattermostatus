@@ -3,9 +3,14 @@
 Updated all dependencies. This should notably provide better keyring support
 on all plateforms.
 
+Add back .deb pacќage creation.
+
+Correct some documentation typo.
+
 ## Bug corrected
 - #17 which prevent some application using the microphone to be detected on
   window
+- #16 default emoji set to one existing on default mattermost instalaltion
 
 # v0.2.5 
 Correct bug #11 where automattermostatus exit with an error when the network

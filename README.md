@@ -128,7 +128,7 @@ interface_name = 'wlp0s20f3'
 #  - Second field is the emoji string for the custom status.
 #  - Third field is the description text foir the custom status.
 #
-status = ["corporatewifi::corplogo::On premise work",
+status = ["corporatewifi::office::On premise work",
 	  "homenet::house::Working home",
 	  "::sleeping::Off time"]
 
