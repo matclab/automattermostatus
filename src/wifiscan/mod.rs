@@ -21,8 +21,8 @@ use thiserror::Error;
 
 /// Wireless network interface.
 pub struct WiFi {
-    /// wifi interface name (used on Windows for interface-specific commands)
-    #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+    /// wifi interface name (used to exclude wifi from ethernet detection on macOS/Windows)
+    #[cfg_attr(target_os = "linux", allow(dead_code))]
     pub interface: String,
     /// Command runner for executing system commands (enables mocking in tests)
     runner: Box<dyn CommandRunner>,
@@ -62,5 +62,10 @@ pub trait WifiInterface: fmt::Debug {
     /// Return visible SSIDs
     fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {
         unimplemented!();
+    }
+
+    /// Check if an ethernet (wired) connection is currently active.
+    fn is_ethernet_connected(&self) -> Result<bool, WifiError> {
+        Ok(false)
     }
 }

@@ -23,6 +23,9 @@ use offtime::Off;
 pub use state::{Cache, Location, State};
 pub use wifiscan::{WiFi, WifiInterface};
 
+/// Virtual SSID injected when wifi is disabled but ethernet is active.
+pub const ETHERNET_SSID: &str = "Ethernet";
+
 /// Setup logging to stdout
 /// (Tracing is a bit more involving to set up but will provide much more feature if needed)
 pub fn setup_tracing(args: &Args) -> Result<()> {
@@ -113,7 +116,15 @@ pub fn process_one_iteration(
     delay_secs: u64,
 ) -> Result<()> {
     if !config.schedule.is_off_time() {
-        let ssids = wifi.visible_ssid().context("Getting visible SSIDs")?;
+        let ssids = if wifi.is_wifi_enabled().unwrap_or(false) {
+            wifi.visible_ssid().context("Getting visible SSIDs")?
+        } else if wifi.is_ethernet_connected().unwrap_or(false) {
+            debug!("Wifi disabled, ethernet connected: using virtual SSID '{}'", ETHERNET_SSID);
+            vec![ETHERNET_SSID.to_string()]
+        } else {
+            debug!("Wifi disabled and no ethernet connection detected");
+            Vec::new()
+        };
         debug!("Visible SSIDs {:#?}", ssids);
         let mut found_ssid = false;
         // Search for known wifi in visible ssids
@@ -169,13 +180,10 @@ pub fn get_wifi_and_update_status_loop(
     let mut state = State::new(&cache).context("Creating cache")?;
     let delay_duration = time::Duration::new(config.schedule.delay.into(), 0);
     let wifi = WiFi::new(&config.wifi.interface_name);
-    if !wifi
-        .is_wifi_enabled()
-        .context("Checking if wifi is enabled")?
-    {
-        error!("wifi is disabled");
-    } else {
+    if wifi.is_wifi_enabled().unwrap_or(false) {
         info!("Wifi is enabled");
+    } else {
+        info!("Wifi is disabled, will check for ethernet fallback");
     }
     let mut session = create_session(&config)?;
     let mut micusage = micscan::MicUsage::new();
@@ -320,14 +328,22 @@ mod process_one_iteration_should {
     #[derive(Debug)]
     struct MockWifi {
         ssids: Vec<String>,
+        wifi_enabled: bool,
+        ethernet_connected: bool,
     }
 
     impl WifiInterface for MockWifi {
         fn is_wifi_enabled(&self) -> Result<bool, WifiError> {
-            Ok(true)
+            Ok(self.wifi_enabled)
         }
         fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {
+            if !self.wifi_enabled {
+                return Err(WifiError::WifiDisabled);
+            }
             Ok(self.ssids.clone())
+        }
+        fn is_ethernet_connected(&self) -> Result<bool, WifiError> {
+            Ok(self.ethernet_connected)
         }
     }
 
@@ -384,6 +400,8 @@ mod process_one_iteration_should {
 
         let wifi = MockWifi {
             ssids: vec!["HomeNet".to_string(), "NeighborWifi".to_string()],
+            wifi_enabled: true,
+            ethernet_connected: false,
         };
 
         let cache = Cache::new(temp.join("automattermostatus.state"));
@@ -434,6 +452,8 @@ mod process_one_iteration_should {
 
         let wifi = MockWifi {
             ssids: vec!["UnknownWifi".to_string()],
+            wifi_enabled: true,
+            ethernet_connected: false,
         };
 
         let cache = Cache::new(temp.join("automattermostatus.state"));
@@ -455,6 +475,110 @@ mod process_one_iteration_should {
 
         login_mock.assert();
         // The status endpoint should not have been called
+        status_mock.assert_hits(0);
+        Ok(())
+    }
+
+    #[test]
+    fn use_ethernet_status_when_wifi_disabled_and_ethernet_connected() -> Result<()> {
+        let server = MockServer::start();
+        let temp = Temp::new_dir().unwrap().to_path_buf();
+        let mut config = test_config(&server.url(""), temp.clone());
+        config.wifi.statuses = vec!["Ethernet::office::On premise (ethernet)".to_string()];
+
+        let login_mock = server.mock(|expect, resp_with| {
+            expect
+                .method(GET)
+                .header("Authorization", "Bearer token")
+                .path("/api/v4/users/me");
+            resp_with
+                .status(200)
+                .header("content-type", "application/json")
+                .json_body(serde_json::json!({"id":"user_id"}));
+        });
+
+        let status_mock = server.mock(|expect, resp_with| {
+            expect
+                .method(PUT)
+                .header("Authorization", "Bearer token")
+                .path("/api/v4/users/me/status/custom");
+            resp_with.status(200).body("ok");
+        });
+
+        let wifi = MockWifi {
+            ssids: vec![],
+            wifi_enabled: false,
+            ethernet_connected: true,
+        };
+
+        let cache = Cache::new(temp.join("automattermostatus.state"));
+        let mut state = State::new(&cache)?;
+        let mut session = Session::new(&server.url("")).with_token("token").login()?;
+        let mut micusage = micscan::MicUsage::new();
+        let mut status_dict = prepare_status(&config)?;
+
+        process_one_iteration(
+            &wifi,
+            &mut micusage,
+            &mut state,
+            &mut session,
+            &config,
+            &mut status_dict,
+            &cache,
+            0,
+        )?;
+
+        login_mock.assert();
+        status_mock.assert();
+        Ok(())
+    }
+
+    #[test]
+    fn not_update_when_wifi_disabled_and_no_ethernet() -> Result<()> {
+        let server = MockServer::start();
+        let temp = Temp::new_dir().unwrap().to_path_buf();
+        let config = test_config(&server.url(""), temp.clone());
+
+        let login_mock = server.mock(|expect, resp_with| {
+            expect
+                .method(GET)
+                .header("Authorization", "Bearer token")
+                .path("/api/v4/users/me");
+            resp_with
+                .status(200)
+                .header("content-type", "application/json")
+                .json_body(serde_json::json!({"id":"user_id"}));
+        });
+
+        let status_mock = server.mock(|expect, resp_with| {
+            expect.method(PUT).path("/api/v4/users/me/status/custom");
+            resp_with.status(200).body("ok");
+        });
+
+        let wifi = MockWifi {
+            ssids: vec![],
+            wifi_enabled: false,
+            ethernet_connected: false,
+        };
+
+        let cache = Cache::new(temp.join("automattermostatus.state"));
+        let mut state = State::new(&cache)?;
+        let mut session = Session::new(&server.url("")).with_token("token").login()?;
+        let mut micusage = micscan::MicUsage::new();
+        let mut status_dict = prepare_status(&config)?;
+
+        process_one_iteration(
+            &wifi,
+            &mut micusage,
+            &mut state,
+            &mut session,
+            &config,
+            &mut status_dict,
+            &cache,
+            0,
+        )?;
+
+        login_mock.assert();
         status_mock.assert_hits(0);
         Ok(())
     }

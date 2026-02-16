@@ -1,4 +1,4 @@
-use super::osx_parse::extract_airport_ssid;
+use super::osx_parse::{extract_airport_ssid, has_active_ethernet};
 use crate::command::SystemCommandRunner;
 use crate::wifiscan::{WiFi, WifiError, WifiInterface};
 
@@ -22,6 +22,16 @@ impl WifiInterface for WiFi {
             .map_err(|e| WifiError::IoError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
         Ok(output.contains("enabled"))
+    }
+
+    /// Check if an ethernet (wired) connection is currently active.
+    fn is_ethernet_connected(&self) -> Result<bool, WifiError> {
+        let output = self
+            .runner
+            .run("ifconfig", vec![])
+            .map_err(|e| WifiError::IoError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+
+        Ok(has_active_ethernet(&output, &self.interface))
     }
 
     fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {

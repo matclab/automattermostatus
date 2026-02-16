@@ -1,4 +1,4 @@
-use super::windows_parse::extract_netsh_ssid;
+use super::windows_parse::{extract_netsh_ssid, has_connected_ethernet};
 use crate::command::SystemCommandRunner;
 use crate::wifiscan::{WiFi, WifiError, WifiInterface};
 
@@ -31,6 +31,19 @@ impl WifiInterface for WiFi {
             .map_err(|e| WifiError::IoError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
         Ok(!output.contains("There is no wireless interface"))
+    }
+
+    /// Check if an ethernet (wired) connection is currently active.
+    fn is_ethernet_connected(&self) -> Result<bool, WifiError> {
+        let output = self
+            .runner
+            .run(
+                "netsh",
+                vec!["interface".into(), "show".into(), "interface".into()],
+            )
+            .map_err(|e| WifiError::IoError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+
+        Ok(has_connected_ethernet(&output, &self.interface))
     }
 
     fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {

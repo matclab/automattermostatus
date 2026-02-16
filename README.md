@@ -5,8 +5,8 @@ lang: en
 [![](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/matclab/donate)
 
 # auto*mat-termo-st*atus
-Automate your mattermost custom status with the help of visible Wi-Fi SSID and
-set your status to *do not disturb* when in visio.
+Automate your mattermost custom status with the help of visible Wi-Fi SSID
+or ethernet connection, and set your status to *do not disturb* when in visio.
 
 Development site is hosted on [gitlab](https://gitlab.com/matclab/automattermostatus).
 
@@ -127,9 +127,12 @@ interface_name = 'wlp0s20f3'
 #    off times.
 #  - Second field is the emoji string for the custom status.
 #  - Third field is the description text foir the custom status.
+#  - The special value "Ethernet" matches when wifi is disabled but a wired
+#    (ethernet) connection is active.
 #
 status = ["corporatewifi::office::On premise work",
 	  "homenet::house::Working home",
+	  "Ethernet::office::On premise (ethernet)",
 	  "::sleeping::Off time"]
 
 # Base url of the mattermost instanbce

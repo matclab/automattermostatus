@@ -1,13 +1,23 @@
+# v0.2.7  **TODO**
+
+Allows a virtual "Ethernet" SSID in the `status` config in order to take
+account an Ethernet connexion when wifi is disabled.
+
+
+## Fixed Bug 
+- `verbose` option set up in the config file was not taken into account.
+
+
 # v0.2.6 
 
 Updated all dependencies. This should notably provide better keyring support
 on all plateforms.
 
-Add back .deb pacќage creation.
+Add back .deb package creation.
 
 Correct some documentation typo.
 
-## Bug corrected
+## Fixed Bugs
 - #17 which prevent some application using the microphone to be detected on
   window
 - #16 default emoji set to one existing on default mattermost instalaltion

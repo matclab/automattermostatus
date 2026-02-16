@@ -318,7 +318,11 @@ impl Default for Args {
             interface_name: Some("Wireless Network Connection".into()),
             #[cfg(target_os = "macos")]
             interface_name: Some("en0".into()),
-            status: ["home::house::working at home".to_string()].to_vec(),
+            status: [
+                "home::house::working at home".to_string(),
+                "Ethernet::office::On premise (ethernet)".to_string(),
+            ]
+            .to_vec(),
             delay: Some(60),
             state_dir: ProjectDirs::from("net", "ams", "automattermostatus")
                 .map(|p| p.cache_dir().to_owned()),
