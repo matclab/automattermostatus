@@ -62,14 +62,14 @@ where
         let token = session.token.clone();
         let uri = session.base_uri.to_owned() + api_path;
         debug!("Sending {:?} to {}", self, uri);
-        let resp = ureq::put(&uri)
+        let json_value = serde_json::to_value(self).map_err(|e| {
+            ureq::Error::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+        })?;
+        let resp = session
+            .agent
+            .put(&uri)
             .header("Authorization", &("Bearer ".to_owned() + &token))
-            .send_json(serde_json::to_value(self).unwrap_or_else(|e| {
-                panic!(
-                    "Serialization of MMCustomStatus '{:?}' failed with {:?}",
-                    &self, &e
-                )
-            }))?;
+            .send_json(json_value)?;
         Ok(resp.status().as_u16())
     }
 
@@ -199,13 +199,10 @@ impl MMCustomStatus {
         // do not set expiry time if set in the past
         if let Some(expiry) = parse_from_hmstr(time_str) {
             if Local::now().naive_local() < expiry {
-                self.expires_at = Some(
-                    Local
-                        .from_local_datetime(&expiry)
-                        .latest()
-                        .expect("Naive to local date conversion problem"),
-                );
-                self.duration = Some("date_and_time".to_owned());
+                if let Some(local_dt) = Local.from_local_datetime(&expiry).latest() {
+                    self.expires_at = Some(local_dt);
+                    self.duration = Some("date_and_time".to_owned());
+                }
             } else {
                 debug!("now {:?} >= expiry {:?}", Local::now(), expiry);
             }

@@ -11,9 +11,14 @@ use crate::mattermost::{LoggedSession, MMCustomStatus};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-/// If more than MAX_SECS_BEFORE_FORCE_UPDATE are elapsed, we forcibly update
-/// mattermost custom status to the expected value even if there was no change in visible
-/// wifi SSIDs.
+/// If more than MAX_SECS_BEFORE_FORCE_UPDATE seconds (1 hour) have elapsed, we
+/// forcibly update the mattermost custom status to the expected value even if
+/// there was no change in visible wifi SSIDs.
+///
+/// This guards against desynchronization: if the Mattermost status was changed
+/// externally (e.g. via the web UI or mobile app), or if a transient API error
+/// caused a previous update to be silently dropped, the force-update ensures
+/// the status converges back to the expected value within a bounded time.
 const MAX_SECS_BEFORE_FORCE_UPDATE: u64 = 60 * 60;
 
 /// Struct implementing a cache for the application state
@@ -66,12 +71,9 @@ impl State {
         info!("Set location to `{:?}`", location);
         self.location = location;
         self.lastchange_timestamp = Utc::now().timestamp();
-        fs::write(
-            &cache.path,
-            serde_json::to_string(&self)
-                .unwrap_or_else(|_| panic!("Serialization of State Failed :{:?}", &self)),
-        )
-        .with_context(|| format!("Writing to cache file {:?}", cache.path))?;
+        let serialized = serde_json::to_string(&self).context("Serializing state")?;
+        fs::write(&cache.path, serialized)
+            .with_context(|| format!("Writing to cache file {:?}", cache.path))?;
         Ok(())
     }
 
@@ -96,7 +98,7 @@ impl State {
             // No need to update MM status again
             let elapsed_sec: u64 = (Utc::now().timestamp() - self.lastchange_timestamp)
                 .try_into()
-                .unwrap();
+                .unwrap_or(0);
             if delay_between_polling * 2 < elapsed_sec
                 && elapsed_sec <= MAX_SECS_BEFORE_FORCE_UPDATE
             {

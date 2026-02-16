@@ -1,28 +1,27 @@
-use anyhow::Context;
 use quick_xml::events::{BytesText, Event};
 use quick_xml::Reader;
 use tracing::{debug, error};
 
-#[allow(dead_code)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub(crate) fn extract_mic_in_use(ioreg_output: &str) -> bool {
     usb_mic_in_use(ioreg_output)
 }
 
 fn node_has_engine_state(e: &BytesText, reader: &mut Reader<&[u8]>) -> bool {
-    if e.xml_content()
-        .context("Reading xml <key> content")
-        .unwrap()
-        == "IOAudioEngineState"
-    {
+    let Ok(content) = e.xml_content() else {
+        error!("Failed to read xml <key> content");
+        return false;
+    };
+    if content == "IOAudioEngineState" {
         let mut buf = Vec::new();
         let _ = reader.read_event_into(&mut buf); // </key>
         let _ = reader.read_event_into(&mut buf); // <integer>
         if let Ok(Event::Text(e)) = reader.read_event_into(&mut buf) {
-            if e.xml_content()
-                .context("Reading xml <integer content")
-                .unwrap()
-                == "1"
-            {
+            let Ok(value) = e.xml_content() else {
+                error!("Failed to read xml <integer> content");
+                return false;
+            };
+            if value == "1" {
                 debug!("Found IOAudioEngineState = 1");
                 true
             } else {
@@ -68,13 +67,11 @@ pub(crate) fn usb_mic_in_use(ioreg_output: &str) -> bool {
                         if !audioenginestate_found {
                             audioenginestate_found = node_has_engine_state(&e, &mut reader);
                         }
-                        if e.xml_content()
-                            .context("Reading xml <key> content")
-                            .unwrap()
-                            == "IOAudioEngineInputSampleOffset"
-                        {
-                            debug!("Found IOAudioEngineInputSampleOffset");
-                            sampleoffset_found = true;
+                        if let Ok(key_content) = e.xml_content() {
+                            if key_content == "IOAudioEngineInputSampleOffset" {
+                                debug!("Found IOAudioEngineInputSampleOffset");
+                                sampleoffset_found = true;
+                            }
                         }
                     }
                 }
@@ -98,7 +95,14 @@ pub(crate) fn usb_mic_in_use(ioreg_output: &str) -> bool {
                 }
             }
             Ok(Event::Eof) => break,
-            Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
+            Err(e) => {
+                error!(
+                    "XML parse error at position {}: {:?}",
+                    reader.buffer_position(),
+                    e
+                );
+                break;
+            }
             _ => (), // There are several other `Event`s we do not consider here
         }
     }

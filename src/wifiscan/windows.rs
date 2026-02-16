@@ -1,12 +1,13 @@
 use super::windows_parse::extract_netsh_ssid;
+use crate::command::SystemCommandRunner;
 use crate::wifiscan::{WiFi, WifiError, WifiInterface};
-use std::process::Command;
 
 impl WiFi {
     /// Create windows `WiFi` interface
     pub fn new(interface: &str) -> Self {
         WiFi {
             interface: interface.to_owned(),
+            runner: Box::new(SystemCommandRunner),
         }
     }
 }
@@ -16,25 +17,30 @@ impl WiFi {
 impl WifiInterface for WiFi {
     /// Check if wireless network adapter is enabled.
     fn is_wifi_enabled(&self) -> Result<bool, WifiError> {
-        let output = Command::new("netsh")
-            .args(&[
-                "wlan",
-                "show",
-                "interface",
-                &format!("name= \"{}\"", self.interface),
-            ])
-            .output()
-            .map_err(|err| WifiError::IoError(err))?;
+        let output = self
+            .runner
+            .run(
+                "netsh",
+                vec![
+                    "wlan".into(),
+                    "show".into(),
+                    "interface".into(),
+                    format!("name= \"{}\"", self.interface),
+                ],
+            )
+            .map_err(|e| WifiError::IoError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
-        Ok(!String::from_utf8_lossy(&output.stdout).contains("There is no wireless interface"))
+        Ok(!output.contains("There is no wireless interface"))
     }
 
     fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {
-        let output = Command::new("netsh")
-            .args(&["wlan", "show", "networks"])
-            .output()
-            .map_err(|err| WifiError::IoError(err))?;
-        let stdout = String::from_utf8_lossy(&output.stdout).to_owned();
-        Ok(extract_netsh_ssid(&stdout))
+        let output = self
+            .runner
+            .run(
+                "netsh",
+                vec!["wlan".into(), "show".into(), "networks".into()],
+            )
+            .map_err(|e| WifiError::IoError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+        Ok(extract_netsh_ssid(&output))
     }
 }

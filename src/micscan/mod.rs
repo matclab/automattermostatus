@@ -17,7 +17,6 @@ pub use osx::processes_owning_mic;
 #[cfg(target_os = "windows")]
 pub use windows::processes_owning_mic;
 
-use crate::config::Args;
 use crate::mattermost::{LoggedSession, MMStatus, Status};
 
 /// Store MicUsage state
@@ -38,13 +37,17 @@ impl MicUsage {
     }
 
     /// Update status to *do not disturb* if a known application use the mic
-    pub fn update_dnd_status(&mut self, args: &Args, session: &mut LoggedSession) -> &mut Self {
+    pub fn update_dnd_status(
+        &mut self,
+        mic_app_names: &[String],
+        session: &mut LoggedSession,
+    ) -> &mut Self {
         match processes_owning_mic() {
             Ok(names) => {
                 info!("Apps using mic: {:?}", names);
                 let mut watched_app_found = false;
                 for name in names {
-                    if args.mic_app_names.contains(&name) {
+                    if mic_app_names.contains(&name) {
                         debug!("Watched app found: {:?}", name);
                         watched_app_found = true;
                         break;

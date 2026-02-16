@@ -9,6 +9,7 @@ use tracing::{debug, error, info, warn};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter};
 
+pub mod command;
 pub mod config;
 pub mod mattermost;
 pub mod micscan;
@@ -16,7 +17,7 @@ pub mod offtime;
 pub mod state;
 pub mod utils;
 pub mod wifiscan;
-pub use config::{Args, SecretType, WifiStatusConfig};
+pub use config::{AppConfig, Args, SecretType, WifiStatusConfig};
 pub use mattermost::{BaseSession, LoggedSession, MMCustomStatus, Session};
 use offtime::Off;
 pub use state::{Cache, Location, State};
@@ -26,7 +27,8 @@ pub use wifiscan::{WiFi, WifiInterface};
 /// (Tracing is a bit more involving to set up but will provide much more feature if needed)
 pub fn setup_tracing(args: &Args) -> Result<()> {
     let fmt_layer = fmt::layer().with_target(false);
-    let filter_layer = EnvFilter::try_new(args.verbose.get_level_filter()).unwrap();
+    let filter_layer =
+        EnvFilter::try_new(args.verbose.get_level_filter()).context("Initializing log filter")?;
 
     tracing_subscriber::registry()
         .with(filter_layer)
@@ -52,9 +54,9 @@ pub fn get_cache(dir: Option<PathBuf>) -> Result<Cache> {
 
 /// Prepare a dictionnary of [`MMCustomStatus`] ready to be send to mattermost
 /// server depending upon the location being found.
-pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMCustomStatus>> {
+pub fn prepare_status(config: &AppConfig) -> Result<HashMap<Location, MMCustomStatus>> {
     let mut res = HashMap::new();
-    for s in &args.status {
+    for s in &config.wifi.statuses {
         let sc: WifiStatusConfig = s.parse().with_context(|| format!("Parsing {s}"))?;
         debug!("Adding : {:?}", sc);
         res.insert(
@@ -65,32 +67,23 @@ pub fn prepare_status(args: &Args) -> Result<HashMap<Location, MMCustomStatus>> 
     Ok(res)
 }
 
-/// Create [`Session`] according to `args.secret_type`.
-pub fn create_session(args: &Args) -> LoggedSession {
-    args.mm_url.as_ref().expect("Mattermost URL is not defined");
-    args.secret_type
-        .as_ref()
-        .expect("Internal Error: secret_type is not defined");
-    args.mm_secret.as_ref().expect("Secret is not defined");
-    let delay_duration = time::Duration::new(
-        args.delay
-            .expect("Internal error: args.delay shouldn't be None")
-            .into(),
-        0,
-    );
-    let mut session = Session::new(args.mm_url.as_ref().unwrap());
-    let mut session: Box<dyn BaseSession> = match args.secret_type.as_ref().unwrap() {
-        SecretType::Password => Box::new(session.with_credentials(
-            args.mm_user.as_ref().unwrap(),
-            args.mm_secret.as_ref().unwrap(),
-        )),
-        SecretType::Token => Box::new(session.with_token(args.mm_secret.as_ref().unwrap())),
+/// Create [`Session`] according to the mattermost configuration.
+pub fn create_session(config: &AppConfig) -> Result<LoggedSession> {
+    let mm = &config.mattermost;
+    let delay_duration = time::Duration::new(config.schedule.delay.into(), 0);
+    let mut session = Session::new(&mm.url);
+    let mut session: Box<dyn BaseSession> = match mm.secret_type {
+        SecretType::Password => {
+            let mm_user = mm.user.as_ref().context("Mattermost user is not defined")?;
+            Box::new(session.with_credentials(mm_user, &mm.secret))
+        }
+        SecretType::Token => Box::new(session.with_token(&mm.secret)),
     };
     loop {
         let res = session.login();
         if let Ok(session) = res {
             debug!("LoggedSession {:?}", session);
-            return session;
+            return Ok(session);
         } else {
             error!("Failed to access mattermost API {:?}", res);
             sleep(delay_duration);
@@ -98,26 +91,84 @@ pub fn create_session(args: &Args) -> LoggedSession {
     }
 }
 
+/// Process a single iteration of the main loop.
+///
+/// This function encapsulates the logic for one polling cycle: checking wifi SSIDs,
+/// updating mattermost status, and handling off-time. It is extracted from the main
+/// loop to enable unit testing.
+///
+/// **Note on mutable state**: [`State`] and [`micscan::MicUsage`] are currently
+/// managed as independent mutable references. If a third signal source is added
+/// (e.g. calendar, GPS), consider unifying them behind a single `AppState` struct
+/// to keep the coordination logic manageable.
+#[allow(clippy::too_many_arguments)]
+pub fn process_one_iteration(
+    wifi: &dyn WifiInterface,
+    micusage: &mut micscan::MicUsage,
+    state: &mut State,
+    session: &mut LoggedSession,
+    config: &AppConfig,
+    status_dict: &mut HashMap<Location, MMCustomStatus>,
+    cache: &Cache,
+    delay_secs: u64,
+) -> Result<()> {
+    if !config.schedule.is_off_time() {
+        let ssids = wifi.visible_ssid().context("Getting visible SSIDs")?;
+        debug!("Visible SSIDs {:#?}", ssids);
+        let mut found_ssid = false;
+        // Search for known wifi in visible ssids
+        for (l, mmstatus) in status_dict.iter_mut() {
+            if let Location::Known(wifi_substring) = l {
+                if ssids.iter().any(|x| x.contains(wifi_substring)) {
+                    if wifi_substring.is_empty() {
+                        debug!("We do not match against empty SSID reserved for off time");
+                        continue;
+                    }
+                    debug!("known wifi '{}' detected", wifi_substring);
+                    found_ssid = true;
+                    mmstatus.expires_at(&config.schedule.expires_at);
+                    if let Err(e) =
+                        state.update_status(l.clone(), Some(mmstatus), session, cache, delay_secs)
+                    {
+                        error!("Fail to update status : {}", e)
+                    }
+                    break;
+                }
+            }
+        }
+        if !found_ssid {
+            debug!("Unknown wifi");
+            if let Err(e) = state.update_status(Location::Unknown, None, session, cache, delay_secs)
+            {
+                error!("Fail to update status : {}", e)
+            }
+        }
+    } else {
+        // Send status for Off time (the one with empty wifi_substring).
+        let off_location = Location::Known("".to_string());
+        if let Some(offstatus) = status_dict.get_mut(&off_location) {
+            debug!("Setting state for Offtime");
+            if let Err(e) =
+                state.update_status(off_location, Some(offstatus), session, cache, delay_secs)
+            {
+                error!("Fail to update status : {}", e)
+            }
+        }
+    }
+    micusage.update_dnd_status(&config.mic.app_names, session);
+    Ok(())
+}
+
 /// Main application loop, looking for a known SSID and updating
 /// mattermost custom status accordingly.
 pub fn get_wifi_and_update_status_loop(
-    args: Args,
+    config: AppConfig,
     mut status_dict: HashMap<Location, MMCustomStatus>,
 ) -> Result<()> {
-    let cache = get_cache(args.state_dir.to_owned()).context("Reading cached state")?;
+    let cache = get_cache(Some(config.state_dir.clone())).context("Reading cached state")?;
     let mut state = State::new(&cache).context("Creating cache")?;
-    let delay_duration = time::Duration::new(
-        args.delay
-            .expect("Internal error: args.delay shouldn't be None")
-            .into(),
-        0,
-    );
-    let wifi = WiFi::new(
-        &args
-            .interface_name
-            .clone()
-            .expect("Internal error: args.interface_name shouldn't be None"),
-    );
+    let delay_duration = time::Duration::new(config.schedule.delay.into(), 0);
+    let wifi = WiFi::new(&config.wifi.interface_name);
     if !wifi
         .is_wifi_enabled()
         .context("Checking if wifi is enabled")?
@@ -126,67 +177,20 @@ pub fn get_wifi_and_update_status_loop(
     } else {
         info!("Wifi is enabled");
     }
-    let mut session = create_session(&args);
-    let mut micusage = &mut micscan::MicUsage::new();
+    let mut session = create_session(&config)?;
+    let mut micusage = micscan::MicUsage::new();
     loop {
-        if !&args.is_off_time() {
-            let ssids = wifi.visible_ssid().context("Getting visible SSIDs")?;
-            debug!("Visible SSIDs {:#?}", ssids);
-            let mut found_ssid = false;
-            // Search for known wifi in visible ssids
-            for (l, mmstatus) in status_dict.iter_mut() {
-                if let Location::Known(wifi_substring) = l {
-                    if ssids.iter().any(|x| x.contains(wifi_substring)) {
-                        if wifi_substring.is_empty() {
-                            debug!("We do not match against empty SSID reserved for off time");
-                            continue;
-                        }
-                        debug!("known wifi '{}' detected", wifi_substring);
-                        found_ssid = true;
-                        mmstatus.expires_at(&args.expires_at);
-                        if let Err(e) = state.update_status(
-                            l.clone(),
-                            Some(mmstatus),
-                            &mut session,
-                            &cache,
-                            delay_duration.as_secs(),
-                        ) {
-                            error!("Fail to update status : {}", e)
-                        }
-                        break;
-                    }
-                }
-            }
-            if !found_ssid {
-                debug!("Unknown wifi");
-                if let Err(e) = state.update_status(
-                    Location::Unknown,
-                    None,
-                    &mut session,
-                    &cache,
-                    delay_duration.as_secs(),
-                ) {
-                    error!("Fail to update status : {}", e)
-                }
-            }
-        } else {
-            // Send status for Off time (the one with empty wifi_substring).
-            let off_location = Location::Known("".to_string());
-            if let Some(offstatus) = status_dict.get_mut(&off_location) {
-                debug!("Setting state for Offtime");
-                if let Err(e) = state.update_status(
-                    off_location,
-                    Some(offstatus),
-                    &mut session,
-                    &cache,
-                    delay_duration.as_secs(),
-                ) {
-                    error!("Fail to update status : {}", e)
-                }
-            }
-        }
-        micusage = micusage.update_dnd_status(&args, &mut session);
-        if let Some(0) = args.delay {
+        process_one_iteration(
+            &wifi,
+            &mut micusage,
+            &mut state,
+            &mut session,
+            &config,
+            &mut status_dict,
+            &cache,
+            delay_duration.as_secs(),
+        )?;
+        if config.schedule.delay == 0 {
             break;
         } else {
             sleep(delay_duration);
@@ -229,7 +233,8 @@ mod prepare_status_should {
             mm_secret: Some("AAA".to_string()),
             ..Default::default()
         };
-        let res = prepare_status(&args)?;
+        let config = args.validate()?;
+        let res = prepare_status(&config)?;
         let mut expected: HashMap<state::Location, mattermost::MMCustomStatus> = HashMap::new();
         expected.insert(
             Location::Known("".to_string()),
@@ -249,33 +254,208 @@ mod prepare_status_should {
 }
 
 #[cfg(test)]
-mod create_session_should {
+mod validate_should {
     use super::*;
+    use anyhow::anyhow;
+
     #[test]
-    #[should_panic(expected = "Mattermost URL is not defined")]
-    fn panic_when_mm_url_is_none() {
+    fn error_when_mm_url_is_none() -> Result<()> {
         let args = Args {
             status: vec!["a::b::c".to_string()],
             mm_secret: Some("AAA".to_string()),
             mm_url: None,
             ..Default::default()
         };
-        let _res = create_session(&args);
+        match args.validate() {
+            Ok(_) => Err(anyhow!("Expected an error")),
+            Err(e) => {
+                assert!(e.to_string().contains("mm_url"), "Unexpected error: {}", e);
+                Ok(())
+            }
+        }
+    }
+
+    #[test]
+    fn error_when_delay_is_none() -> Result<()> {
+        let args = Args {
+            status: vec!["a::b::c".to_string()],
+            mm_secret: Some("AAA".to_string()),
+            delay: None,
+            ..Default::default()
+        };
+        match args.validate() {
+            Ok(_) => Err(anyhow!("Expected an error")),
+            Err(e) => {
+                assert!(e.to_string().contains("Delay"), "Unexpected error: {}", e);
+                Ok(())
+            }
+        }
+    }
+
+    #[test]
+    fn succeed_with_valid_args() -> Result<()> {
+        let args = Args {
+            mm_secret: Some("secret".to_string()),
+            ..Default::default()
+        };
+        let config = args.validate()?;
+        assert_eq!(config.mattermost.url, "https://mattermost.example.com");
+        assert_eq!(config.schedule.delay, 60);
+        assert!(!config.wifi.interface_name.is_empty());
+        Ok(())
     }
 }
 
 #[cfg(test)]
-mod main_loop_should {
+mod process_one_iteration_should {
     use super::*;
+    use crate::config::{MattermostConfig, MicConfig, ScheduleConfig, WifiConfig};
+    use crate::offtime::OffDays;
+    use crate::wifiscan::WifiError;
+    use httpmock::prelude::*;
+    use mktemp::Temp;
+    use test_log::test;
+
+    /// Mock wifi that returns a configurable list of SSIDs
+    #[derive(Debug)]
+    struct MockWifi {
+        ssids: Vec<String>,
+    }
+
+    impl WifiInterface for MockWifi {
+        fn is_wifi_enabled(&self) -> Result<bool, WifiError> {
+            Ok(true)
+        }
+        fn visible_ssid(&self) -> Result<Vec<String>, WifiError> {
+            Ok(self.ssids.clone())
+        }
+    }
+
+    fn test_config(server_url: &str, state_dir: PathBuf) -> AppConfig {
+        AppConfig {
+            mattermost: MattermostConfig {
+                url: server_url.to_string(),
+                user: None,
+                secret_type: SecretType::Token,
+                secret: "token".to_string(),
+            },
+            schedule: ScheduleConfig {
+                begin: None,
+                end: None,
+                expires_at: None,
+                delay: 0,
+                offdays: OffDays::default(),
+            },
+            wifi: WifiConfig {
+                interface_name: "wlan0".to_string(),
+                statuses: vec!["HomeNet::house::At home".to_string()],
+            },
+            mic: MicConfig { app_names: vec![] },
+            state_dir,
+        }
+    }
 
     #[test]
-    #[should_panic(expected = "Internal error: args.delay shouldn't be None")]
-    fn panic_when_args_delay_is_none() {
-        let args = Args {
-            status: vec!["a::b::c".to_string()],
-            delay: None,
-            ..Default::default()
+    fn update_status_when_known_wifi_is_visible() -> Result<()> {
+        let server = MockServer::start();
+        let temp = Temp::new_dir().unwrap().to_path_buf();
+        let config = test_config(&server.url(""), temp.clone());
+
+        // Mock the login endpoint
+        let login_mock = server.mock(|expect, resp_with| {
+            expect
+                .method(GET)
+                .header("Authorization", "Bearer token")
+                .path("/api/v4/users/me");
+            resp_with
+                .status(200)
+                .header("content-type", "application/json")
+                .json_body(serde_json::json!({"id":"user_id"}));
+        });
+
+        // Mock the custom status endpoint
+        let status_mock = server.mock(|expect, resp_with| {
+            expect
+                .method(PUT)
+                .header("Authorization", "Bearer token")
+                .path("/api/v4/users/me/status/custom");
+            resp_with.status(200).body("ok");
+        });
+
+        let wifi = MockWifi {
+            ssids: vec!["HomeNet".to_string(), "NeighborWifi".to_string()],
         };
-        let _res = get_wifi_and_update_status_loop(args, HashMap::new());
+
+        let cache = Cache::new(temp.join("automattermostatus.state"));
+        let mut state = State::new(&cache)?;
+        let mut session = Session::new(&server.url("")).with_token("token").login()?;
+        let mut micusage = micscan::MicUsage::new();
+        let mut status_dict = prepare_status(&config)?;
+
+        process_one_iteration(
+            &wifi,
+            &mut micusage,
+            &mut state,
+            &mut session,
+            &config,
+            &mut status_dict,
+            &cache,
+            0,
+        )?;
+
+        login_mock.assert();
+        status_mock.assert();
+        Ok(())
+    }
+
+    #[test]
+    fn not_update_status_when_wifi_is_unknown() -> Result<()> {
+        let server = MockServer::start();
+        let temp = Temp::new_dir().unwrap().to_path_buf();
+        let config = test_config(&server.url(""), temp.clone());
+
+        // Login mock
+        let login_mock = server.mock(|expect, resp_with| {
+            expect
+                .method(GET)
+                .header("Authorization", "Bearer token")
+                .path("/api/v4/users/me");
+            resp_with
+                .status(200)
+                .header("content-type", "application/json")
+                .json_body(serde_json::json!({"id":"user_id"}));
+        });
+
+        // Status endpoint should NOT be called
+        let status_mock = server.mock(|expect, resp_with| {
+            expect.method(PUT).path("/api/v4/users/me/status/custom");
+            resp_with.status(200).body("ok");
+        });
+
+        let wifi = MockWifi {
+            ssids: vec!["UnknownWifi".to_string()],
+        };
+
+        let cache = Cache::new(temp.join("automattermostatus.state"));
+        let mut state = State::new(&cache)?;
+        let mut session = Session::new(&server.url("")).with_token("token").login()?;
+        let mut micusage = micscan::MicUsage::new();
+        let mut status_dict = prepare_status(&config)?;
+
+        process_one_iteration(
+            &wifi,
+            &mut micusage,
+            &mut state,
+            &mut session,
+            &config,
+            &mut status_dict,
+            &cache,
+            0,
+        )?;
+
+        login_mock.assert();
+        // The status endpoint should not have been called
+        status_mock.assert_hits(0);
+        Ok(())
     }
 }

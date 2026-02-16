@@ -51,13 +51,20 @@
 //! # login_mock.assert();
 //! # Ok::<(), anyhow::Error>(())
 //! ```
+//!
+//! This module uses a **type-state pattern** to enforce the session lifecycle at
+//! compile time. A [`Session`] must be promoted to either [`SessionWithToken`] or
+//! [`SessionWithCredentials`] before calling `login()`, which produces a
+//! [`LoggedSession`]. This makes it impossible to use an unauthenticated session
+//! where an authenticated one is required.
+//!
 //! Types sequence is either one of :
 //! - Session → SessionWithToken → LoggedSession
 //! - Session → SessionWithCredentials → LoggedSession
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::mem;
+use std::{fmt, mem};
 use tracing::debug;
 
 /// Trait implementing function necessary to establish a session (getting a authenticating token).
@@ -103,8 +110,11 @@ pub struct SessionWithCredentials {
     password: String,
 }
 
-///  Session once logged
-#[derive(Debug)]
+///  Session once logged.
+///
+/// Holds a shared [`ureq::Agent`] so that all HTTP requests within a session
+/// reuse the same connection pool. The pool is closed when the session is
+/// dropped, ensuring no orphan connections outlive it.
 pub struct LoggedSession {
     #[allow(rustdoc::bare_urls)]
     /// base URL of the mattermost server like https://mattermost.example.com
@@ -113,9 +123,20 @@ pub struct LoggedSession {
     pub token: String,
     /// Mattermost internal user_id
     pub user_id: String,
+    /// HTTP agent (connection pool) shared across all requests in this session
+    pub agent: ureq::Agent,
     // Used to relog when logged out
     user: Option<String>,
     password: Option<String>,
+}
+
+impl fmt::Debug for LoggedSession {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("LoggedSession")
+            .field("base_uri", &self.base_uri)
+            .field("user_id", &self.user_id)
+            .finish()
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -157,14 +178,17 @@ impl BaseSession for SessionWithToken {
         &self.base_uri
     }
     fn login(&mut self) -> Result<LoggedSession> {
+        let agent = ureq::Agent::new_with_defaults();
         let uri = self.base_uri.to_owned() + "/api/v4/users/me";
-        let json: serde_json::Value = ureq::get(&uri)
+        let json: serde_json::Value = agent
+            .get(&uri)
             .header("Authorization", &("Bearer ".to_owned() + &self.token))
             .call()?
             .body_mut()
             .read_json()?;
         debug!("User info: {:?}", json);
         Ok(LoggedSession {
+            agent,
             base_uri: mem::take(&mut self.base_uri),
             token: mem::take(&mut self.token),
             user_id: json["id"]
@@ -190,8 +214,9 @@ impl BaseSession for SessionWithCredentials {
     }
 
     fn login(&mut self) -> Result<LoggedSession> {
+        let agent = ureq::Agent::new_with_defaults();
         let uri = self.base_uri.to_owned() + "/api/v4/users/login";
-        let mut response = ureq::post(&uri).send_json(serde_json::to_value(LoginData {
+        let mut response = agent.post(&uri).send_json(serde_json::to_value(LoginData {
             login_id: self.user.clone(),
             password: self.password.clone(),
         })?)?;
@@ -205,6 +230,7 @@ impl BaseSession for SessionWithCredentials {
             .ok_or(anyhow!("Received id is not a string"))?
             .to_string();
         Ok(LoggedSession {
+            agent,
             base_uri: mem::take(&mut self.base_uri),
             token,
             user_id,
@@ -223,10 +249,13 @@ impl LoggedSession {
         };
 
         let uri = self.base_uri.to_owned() + "/api/v4/users/login";
-        let response = ureq::post(&uri).send_json(serde_json::to_value(LoginData {
-            login_id: user,
-            password,
-        })?)?;
+        let response = self
+            .agent
+            .post(&uri)
+            .send_json(serde_json::to_value(LoginData {
+                login_id: user,
+                password,
+            })?)?;
         let Some(token) = response.headers().get("Token") else {
             return Err(anyhow!("Login authentication failed"));
         };

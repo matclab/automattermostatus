@@ -1,4 +1,3 @@
-use anyhow::Context;
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use tracing::error;
@@ -16,25 +15,33 @@ pub(crate) fn extract_airport_ssid(airport_output: &str) -> Vec<String> {
             Ok(Event::Start(ref e)) => {
                 if e.name().as_ref() == b"key" {
                     if let Ok(Event::Text(e)) = reader.read_event_into(&mut buf) {
-                        if e.xml_content().context("Reading xml 'key' tag").unwrap() == "SSID_STR" {
-                            let _ = reader.read_event(); // </key>
-                            let _ = reader.read_event(); // <string>
-                            if let Ok(Event::Text(e)) = reader.read_event_into(&mut buf) {
-                                txt.push(
-                                    e.xml_content()
-                                        .context("Reading xml 'SSID_STR' strings content")
-                                        .unwrap()
-                                        .to_string(),
-                                );
-                            } else {
-                                error!("Bad xml structure")
+                        if let Ok(key_content) = e.xml_content() {
+                            if key_content == "SSID_STR" {
+                                let _ = reader.read_event(); // </key>
+                                let _ = reader.read_event(); // <string>
+                                if let Ok(Event::Text(e)) = reader.read_event_into(&mut buf) {
+                                    if let Ok(ssid) = e.xml_content() {
+                                        txt.push(ssid.to_string());
+                                    } else {
+                                        error!("Failed to read SSID_STR xml content");
+                                    }
+                                } else {
+                                    error!("Bad xml structure")
+                                }
                             }
                         }
                     }
                 }
             }
             Ok(Event::Eof) => break,
-            Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
+            Err(e) => {
+                error!(
+                    "XML parse error at position {}: {:?}",
+                    reader.buffer_position(),
+                    e
+                );
+                break;
+            }
             _ => (), // There are several other `Event`s we do not consider here
         }
     }

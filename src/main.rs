@@ -15,7 +15,8 @@ fn main(args: Args) -> Result<()> {
         .context("Get secret from mm_secret_cmd")?
         .update_secret_with_keyring()
         .context("Get secret from OS keyring")?;
-    let status_dict = prepare_status(&args).context("Building custom status messages")?;
-    get_wifi_and_update_status_loop(args, status_dict)?;
+    let config = args.validate().context("Validating configuration")?;
+    let status_dict = prepare_status(&config).context("Building custom status messages")?;
+    get_wifi_and_update_status_loop(config, status_dict)?;
     Ok(())
 }

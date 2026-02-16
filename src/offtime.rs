@@ -54,8 +54,8 @@ impl OffDays {
     pub fn new() -> OffDays {
         OffDays(HashMap::new())
     }
-    #[allow(dead_code)]
     /// Insert a new offday for week of `parity`
+    #[cfg(test)]
     fn insert(&mut self, day: Weekday, parity: Parity) -> Option<Parity> {
         self.0.insert(day, parity)
     }
@@ -71,8 +71,8 @@ impl OffDays {
             trace!("match and parity = {:?}", parity);
             res = match parity {
                 Parity::EveryWeek => true,
-                Parity::OddWeek => &now.iso_week().week() % 2 == 1,
-                Parity::EvenWeek => &now.iso_week().week() % 2 == 0,
+                Parity::OddWeek => !now.iso_week().week().is_multiple_of(2),
+                Parity::EvenWeek => now.iso_week().week().is_multiple_of(2),
             };
         } else {
             res = false;

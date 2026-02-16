@@ -22,7 +22,7 @@ Automate mattermost status with the help of wifi network
 
 Use current visible wifi SSID to automate your mattermost status. This program is meant to either be running in
 background or be call regularly with option `--delay 0`. It will then update your mattermost custom status according to
-the config file
+the config file.
 
 USAGE:
     automattermostatus [FLAGS] [OPTIONS]

@@ -1,6 +1,7 @@
 #![allow(missing_docs)]
 //! This module holds struct and helpers for parameters and configuration
 //!
+use crate::command::{CommandRunner, SystemCommandRunner};
 use crate::offtime::{Off, OffDays};
 use crate::utils::parse_from_hmstr;
 use ::structopt::clap::AppSettings;
@@ -14,7 +15,6 @@ use figment::{
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fs;
 use std::path::PathBuf;
-use std::process::Command;
 use structopt;
 use structopt::clap::arg_enum;
 use tracing::{debug, info, warn};
@@ -185,7 +185,12 @@ impl QuietVerbose {
 /// Use current visible wifi SSID to automate your mattermost status.
 /// This program is meant to either be running in background or be call regularly
 /// with option `--delay 0`.
-/// It will then update your mattermost custom status according to the config file
+/// It will then update your mattermost custom status according to the config file.
+///
+// `Args` is the **parsing boundary**: it handles CLI (structopt) and config file
+// (serde/TOML) deserialization where most fields are `Option<T>`. After merging
+// defaults, config file and CLI, call [`Args::validate()`] to produce an
+// [`AppConfig`] with all required fields guaranteed present.
 #[structopt(global_settings(&[AppSettings::ColoredHelp, AppSettings::ColorAuto]))]
 pub struct Args {
     /// wifi interface name
@@ -304,12 +309,8 @@ impl Default for Args {
             interface_name: Some("en0".into()),
             status: ["home::house::working at home".to_string()].to_vec(),
             delay: Some(60),
-            state_dir: Some(
-                ProjectDirs::from("net", "ams", "automattermostatus")
-                    .expect("Unable to find a project dir")
-                    .cache_dir()
-                    .to_owned(),
-            ),
+            state_dir: ProjectDirs::from("net", "ams", "automattermostatus")
+                .map(|p| p.cache_dir().to_owned()),
             mm_user: None,
             keyring_service: None,
             mm_secret: None,
@@ -346,7 +347,133 @@ impl Off for Args {
     }
 }
 
+/// Validated Mattermost connection configuration (no Optional fields).
+#[derive(Debug)]
+pub struct MattermostConfig {
+    /// Mattermost server URL
+    pub url: String,
+    /// Optional user name for login
+    pub user: Option<String>,
+    /// Authentication type
+    pub secret_type: SecretType,
+    /// Authentication secret (password or token)
+    pub secret: String,
+}
+
+/// Validated schedule configuration.
+#[derive(Debug)]
+pub struct ScheduleConfig {
+    /// Beginning of status update window (hh:mm format)
+    pub begin: Option<String>,
+    /// End of status update window (hh:mm format)
+    pub end: Option<String>,
+    /// Expiration time for custom status (hh:mm format)
+    pub expires_at: Option<String>,
+    /// Delay between polling in seconds
+    pub delay: u32,
+    /// Days off
+    pub offdays: OffDays,
+}
+
+impl Off for ScheduleConfig {
+    fn is_off_time(&self) -> bool {
+        self.offdays.is_off_time()
+            || if let Some(begin) = parse_from_hmstr(&self.begin) {
+                Local::now().naive_local() < begin
+            } else {
+                false
+            }
+            || if let Some(end) = parse_from_hmstr(&self.end) {
+                Local::now().naive_local() > end
+            } else {
+                false
+            }
+    }
+}
+
+/// Validated wifi configuration.
+#[derive(Debug)]
+pub struct WifiConfig {
+    /// Wifi interface name (guaranteed non-empty after validation)
+    pub interface_name: String,
+    /// Status configuration triplets
+    pub statuses: Vec<String>,
+}
+
+/// Validated microphone configuration.
+#[derive(Debug)]
+pub struct MicConfig {
+    /// Application names to watch for microphone usage
+    pub app_names: Vec<String>,
+}
+
+/// Fully validated application configuration produced from [`Args::validate()`].
+///
+/// Unlike [`Args`] (which uses `Option<T>` for CLI/TOML parsing), `AppConfig` has
+/// all required fields guaranteed to be present. This eliminates the need for
+/// `unwrap()`/`expect()` calls in the main application loop.
+#[derive(Debug)]
+pub struct AppConfig {
+    /// Mattermost connection settings
+    pub mattermost: MattermostConfig,
+    /// Schedule/timing settings
+    pub schedule: ScheduleConfig,
+    /// Wifi interface settings
+    pub wifi: WifiConfig,
+    /// Microphone monitoring settings
+    pub mic: MicConfig,
+    /// Directory for persisting state
+    pub state_dir: PathBuf,
+}
+
 impl Args {
+    /// Validate all required fields and produce an [`AppConfig`].
+    ///
+    /// This is the boundary between CLI/TOML parsing (where fields are Optional)
+    /// and the application logic (where required fields are guaranteed present).
+    pub fn validate(self) -> Result<AppConfig> {
+        let url = self
+            .mm_url
+            .context("Mattermost URL (mm_url) is not defined")?;
+        let secret_type = self
+            .secret_type
+            .context("Secret type (secret_type) is not defined")?;
+        let secret = self
+            .mm_secret
+            .context("Secret (mm_secret) is not defined")?;
+        let delay = self.delay.context("Delay is not defined")?;
+        let interface_name = self
+            .interface_name
+            .context("Wifi interface name (interface_name) is not defined")?;
+        let state_dir = self
+            .state_dir
+            .context("State directory (state_dir) is not defined")?;
+
+        Ok(AppConfig {
+            mattermost: MattermostConfig {
+                url,
+                user: self.mm_user,
+                secret_type,
+                secret,
+            },
+            schedule: ScheduleConfig {
+                begin: self.begin,
+                end: self.end,
+                expires_at: self.expires_at,
+                delay,
+                offdays: self.offdays,
+            },
+            wifi: WifiConfig {
+                interface_name,
+                statuses: self.status,
+            },
+            mic: MicConfig {
+                app_names: self.mic_app_names,
+            },
+            state_dir,
+        })
+    }
+
     /// Update `args.mm_secret`  with the one fetched from OS keyring
     ///
     pub fn update_secret_with_keyring(mut self) -> Result<Self> {
@@ -370,22 +497,25 @@ impl Args {
     ///
     /// If the secret is a password, `secret` will be updated later when login to the mattermost
     /// server
-    pub fn update_secret_with_command(mut self) -> Result<Args> {
+    pub fn update_secret_with_command(self) -> Result<Args> {
+        self.update_secret_with_command_using(&SystemCommandRunner)
+    }
+
+    /// Update `args.mm_secret` with the standard output of `args.mm_secret_cmd`,
+    /// using the provided [`CommandRunner`].
+    pub fn update_secret_with_command_using(mut self, runner: &dyn CommandRunner) -> Result<Args> {
         if let Some(command) = &self.mm_secret_cmd {
             let params =
                 shell_words::split(command).context("Splitting mm_token_cmd into shell words")?;
             debug!("Running command {}", command);
-            let output = Command::new(&params[0])
-                .args(&params[1..])
-                .output()
-                .context(format!("Error when running {}", &command))?;
-            let secret = String::from_utf8_lossy(&output.stdout);
+            let args: Vec<String> = params[1..].to_vec();
+            let secret = runner
+                .run(&params[0], args)
+                .with_context(|| format!("Error when running {}", &command))?;
             if secret.is_empty() {
                 bail!("command '{}' returns nothing", &command);
             }
-            // /!\ Do not spit secret on stdout on released binary.
-            //debug!("setting secret to {}", secret);
-            self.mm_secret = Some(secret.to_string());
+            self.mm_secret = Some(secret);
         }
         Ok(self)
     }
@@ -394,17 +524,16 @@ impl Args {
     pub fn merge_config_and_params(&self) -> Result<Args> {
         let default_args = Args::default();
         debug!("default Args : {:#?}", default_args);
-        let conf_dir = ProjectDirs::from("net", "ams", "automattermostatus")
-            .expect("Unable to find a project dir")
-            .config_dir()
-            .to_owned();
+        let project_dirs = ProjectDirs::from("net", "ams", "automattermostatus")
+            .context("Unable to find a project dir")?;
+        let conf_dir = project_dirs.config_dir().to_owned();
         fs::create_dir_all(&conf_dir)
             .with_context(|| format!("Creating conf dir {:?}", &conf_dir))?;
         let conf_file = conf_dir.join("automattermostatus.toml");
         if !conf_file.exists() {
             info!("Write {:?} default config file", &conf_file);
             fs::write(&conf_file, toml::to_string(&Args::default())?)
-                .unwrap_or_else(|_| panic!("Unable to write default config file {conf_file:?}"));
+                .with_context(|| format!("Unable to write default config file {conf_file:?}"))?;
         }
 
         let config_args: Args = Figment::from(Toml::file(&conf_file))

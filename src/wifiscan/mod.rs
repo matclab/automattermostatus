@@ -15,15 +15,25 @@ mod windows_parse;
 //#[cfg(test)]
 //mod osx;
 
+use crate::command::CommandRunner;
 use std::{fmt, io};
 use thiserror::Error;
 
 /// Wireless network interface.
-#[derive(Debug)]
 pub struct WiFi {
-    #[allow(dead_code)]
-    /// wifi interface name
+    /// wifi interface name (used on Windows for interface-specific commands)
+    #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
     pub interface: String,
+    /// Command runner for executing system commands (enables mocking in tests)
+    runner: Box<dyn CommandRunner>,
+}
+
+impl fmt::Debug for WiFi {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("WiFi")
+            .field("interface", &self.interface)
+            .finish()
+    }
 }
 
 #[derive(Debug, Error)]

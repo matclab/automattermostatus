@@ -35,24 +35,18 @@ where
         let path = entry.path();
 
         let metadata = fs::metadata(&path)?;
+        let starts_with_prefix = path
+            .file_name()
+            .and_then(|f| f.to_str())
+            .map(|s| s.starts_with(prefix))
+            .unwrap_or(false);
         debug!(
             "{:?} {:?} {:?}",
             path,
             metadata.is_dir(),
-            path.file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .starts_with(prefix)
+            starts_with_prefix
         );
-        if metadata.is_dir()
-            && path
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .starts_with(prefix)
-        {
+        if metadata.is_dir() && starts_with_prefix {
             directories.push(path);
         }
     }
