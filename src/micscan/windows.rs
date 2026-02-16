@@ -79,12 +79,27 @@ mod processes_owning_mic_should {
         let hklm = RegKey::predef(HKEY_CURRENT_USER);
         let base_path = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion";
         // \\CapabilityAccessManager\\ConsentStore\\microphone\\NonPackaged";
-        let key = hklm.open_subkey(base_path)?;
-        let (key, _) = key.create_subkey("CapabilityAccessManager")?;
-        let (key, _) = key.create_subkey("ConsentStore")?;
-        key.delete_subkey_all("microphone")?; // Start from empty hierarchy
-        let (mic, _) = key.create_subkey("microphone")?;
-        let (teams, _) = mic.create_subkey("APP#Truc#Teams.exe")?;
+        let key = hklm
+            .open_subkey(base_path)
+            .with_context(|| format!("open subkey {base_path}"))?;
+        let (key, _) = key
+            .create_subkey("CapabilityAccessManager")
+            .with_context(|| format!("create subkey {base_path}/CapabilityAccessManager"))?;
+        let (key, _) = key.create_subkey("ConsentStore").with_context(|| {
+            format!("create subkey {base_path}/CapabilityAccessManager/ConsentStore")
+        })?;
+        key.delete_subkey_all("microphone")
+            .with_context(|| {
+                format!(
+                    "delete subkey all {base_path}/CapabilityAccessManager/ConsentStore/microphone"
+                )
+            })
+            .ok(); // Start from empty hierarchy
+        let (mic, _) = key.create_subkey("microphone").with_context(|| {
+            format!("delete subkey all {base_path}/CapabilityAccessManager/ConsentStore/microphone")
+        })?;
+        let (teams, _) = mic.create_subkey("APP#Truc#Teams.exe")
+            .with_context(|| format!("delete subkey all {base_path}/CapabilityAccessManager/ConsentStore/microphone/APP#Truc#Teams.exe"))?;
         teams.set_value("LastUsedTimeStop", &"1")?;
         let (key, _) = mic.create_subkey("APP#Truc#Other.exe")?;
         key.set_value("LastUsedTimeStop", &"1")?;
@@ -102,10 +117,12 @@ mod processes_owning_mic_should {
         let hklm = RegKey::predef(HKEY_CURRENT_USER);
         let base_path = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion";
         // \\CapabilityAccessManager\\ConsentStore\\microphone\\NonPackaged";
-        let key = hklm.open_subkey(base_path)?;
+        let key = hklm
+            .open_subkey(base_path)
+            .with_context(|| format!("open subkey {base_path}"))?;
         let (key, _) = key.create_subkey("CapabilityAccessManager")?;
         let (key, _) = key.create_subkey("ConsentStore")?;
-        key.delete_subkey_all("microphone")?; // Start from empty hierarchy
+        key.delete_subkey_all("microphone").ok(); // Start from empty hierarchy
         let (mic, _) = key.create_subkey("microphone")?;
         let (teams, _) = mic.create_subkey("APP#Truc#Teams.exe")?;
         teams.set_value("LastUsedTimeStop", &"1")?;
@@ -128,10 +145,12 @@ mod processes_owning_mic_should {
         let hklm = RegKey::predef(HKEY_CURRENT_USER);
         let base_path = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion";
         // \\CapabilityAccessManager\\ConsentStore\\microphone\\NonPackaged";
-        let key = hklm.open_subkey(base_path)?;
+        let key = hklm
+            .open_subkey(base_path)
+            .with_context(|| format!("open subkey {base_path}"))?;
         let (key, _) = key.create_subkey("CapabilityAccessManager")?;
         let (key, _) = key.create_subkey("ConsentStore")?;
-        key.delete_subkey_all("microphone")?; // Start from empty hierarchy
+        key.delete_subkey_all("microphone").ok(); // Start from empty hierarchy
         let (mic, _) = key.create_subkey("microphone")?;
         let (teams, _) = mic.create_subkey("APP#Truc#Teams.exe")?;
         teams.set_value("LastUsedTimeStop", &"1")?;
@@ -158,10 +177,12 @@ mod processes_owning_mic_should {
         let hklm = RegKey::predef(HKEY_CURRENT_USER);
         let base_path = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion";
         // \\CapabilityAccessManager\\ConsentStore\\microphone\\NonPackaged";
-        let key = hklm.open_subkey(base_path)?;
+        let key = hklm
+            .open_subkey(base_path)
+            .with_context(|| format!("open subkey {base_path}"))?;
         let (key, _) = key.create_subkey("CapabilityAccessManager")?;
         let (key, _) = key.create_subkey("ConsentStore")?;
-        key.delete_subkey_all("microphone")?; // Start from empty hierarchy
+        key.delete_subkey_all("microphone").ok(); // Start from empty hierarchy
         let (mic, _) = key.create_subkey("microphone")?;
         let (teams, _) = mic.create_subkey("APP#Truc#Teams.exe")?;
         teams.set_value("LastUsedTimeStop", &"0")?;

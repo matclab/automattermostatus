@@ -37,7 +37,15 @@ impl WifiInterface for WiFi {
     fn is_ethernet_connected(&self) -> Result<bool, WifiError> {
         let output = self
             .runner
-            .run("nmcli", vec!["-t".into(), "-f".into(), "TYPE,STATE".into(), "device".into()])
+            .run(
+                "nmcli",
+                vec![
+                    "-t".into(),
+                    "-f".into(),
+                    "TYPE,STATE".into(),
+                    "device".into(),
+                ],
+            )
             .map_err(|e| WifiError::IoError(std::io::Error::other(e)))?;
 
         Ok(output.lines().any(|line| line == "ethernet:connected"))

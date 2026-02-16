@@ -119,7 +119,10 @@ pub fn process_one_iteration(
         let ssids = if wifi.is_wifi_enabled().unwrap_or(false) {
             wifi.visible_ssid().context("Getting visible SSIDs")?
         } else if wifi.is_ethernet_connected().unwrap_or(false) {
-            debug!("Wifi disabled, ethernet connected: using virtual SSID '{}'", ETHERNET_SSID);
+            debug!(
+                "Wifi disabled, ethernet connected: using virtual SSID '{}'",
+                ETHERNET_SSID
+            );
             vec![ETHERNET_SSID.to_string()]
         } else {
             debug!("Wifi disabled and no ethernet connection detected");
