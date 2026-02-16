@@ -156,6 +156,14 @@ where
 }
 
 impl QuietVerbose {
+    /// Returns `true` when no `-v`/`-q` flag was passed on the CLI.
+    ///
+    /// Used by `skip_serializing_if` so that the default CLI state does not
+    /// overwrite the config file value during Figment merge.
+    pub fn is_default_from_cli(&self) -> bool {
+        self.verbosity_level == 0 && self.quiet_level == 0
+    }
+
     /// Returns the string associated to the current verbose level
     pub fn get_level_filter(&self) -> &str {
         let quiet: i8 = if self.quiet_level > 1 {
@@ -203,7 +211,7 @@ pub struct Args {
     /// Each triplet shall have the format:
     /// "wifi_substring::emoji_name::status_text". If `wifi_substring` is empty, the ssociated
     /// status will be used for off time.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[structopt(short, long, name = "wifi_substr::emoji::text")]
     pub status: Vec<String>,
 
@@ -284,13 +292,16 @@ pub struct Args {
     pub delay: Option<u32>,
 
     /// List of application watched for using the microphone
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[structopt(short, long, name = "app binary name")]
     pub mic_app_names: Vec<String>,
 
     #[allow(missing_docs)]
     #[structopt(flatten)]
-    #[serde(deserialize_with = "de_from_str")]
+    #[serde(
+        deserialize_with = "de_from_str",
+        skip_serializing_if = "QuietVerbose::is_default_from_cli"
+    )]
     pub verbose: QuietVerbose,
 
     #[structopt(skip)]
@@ -522,8 +533,6 @@ impl Args {
 
     /// Merge with precedence default [`Args`], config file and command line parameters.
     pub fn merge_config_and_params(&self) -> Result<Args> {
-        let default_args = Args::default();
-        debug!("default Args : {:#?}", default_args);
         let project_dirs = ProjectDirs::from("net", "ams", "automattermostatus")
             .context("Unable to find a project dir")?;
         let conf_dir = project_dirs.config_dir().to_owned();
@@ -536,18 +545,131 @@ impl Args {
                 .with_context(|| format!("Unable to write default config file {conf_file:?}"))?;
         }
 
-        let config_args: Args = Figment::from(Toml::file(&conf_file))
-            .extract()
-            .with_context(|| format!("Reading conf file {:?}", &conf_file))?;
-        debug!("config Args : {:#?}", config_args);
+        self.merge_with_config_file(&conf_file)
+    }
+
+    /// Pure merge logic: Default → Config File → CLI args.
+    ///
+    /// Separated from [`merge_config_and_params`] so that tests can call it
+    /// directly with a temporary TOML file, without filesystem side-effects.
+    fn merge_with_config_file(&self, conf_file: &std::path::Path) -> Result<Args> {
+        debug!("default Args : {:#?}", Args::default());
+        // Merge defaults with config file for debug logging (non-fatal)
+        if let Ok(config_args) = Figment::from(Serialized::defaults(Args::default()))
+            .merge(Toml::file(conf_file))
+            .extract::<Args>()
+        {
+            debug!("config Args : {:#?}", config_args);
+        }
         debug!("parameter Args : {:#?}", self);
         // Merge config Default → Config File → command line args
         let res = Figment::from(Serialized::defaults(Args::default()))
-            .merge(Toml::file(&conf_file))
+            .merge(Toml::file(conf_file))
             .merge(Serialized::defaults(self))
             .extract()
             .context("Merging configuration file and parameters")?;
         debug!("Merged config and parameters : {:#?}", res);
         Ok(res)
+    }
+
+    /// Build an `Args` that mimics structopt parsing with no CLI flags.
+    ///
+    /// All `Option<T>` fields are `None`, `Vec`s are empty, and `verbose`
+    /// has (0,0) — the structopt `from_occurrences` default.
+    #[cfg(test)]
+    fn cli_no_flags() -> Self {
+        Args {
+            interface_name: None,
+            status: Vec::new(),
+            mm_url: None,
+            mm_user: None,
+            secret_type: None,
+            keyring_service: None,
+            mm_secret: None,
+            mm_secret_cmd: None,
+            state_dir: None,
+            begin: None,
+            end: None,
+            expires_at: None,
+            delay: None,
+            mic_app_names: Vec::new(),
+            verbose: QuietVerbose {
+                verbosity_level: 0,
+                quiet_level: 0,
+            },
+            offdays: OffDays::default(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod merge_should {
+    use super::*;
+    use mktemp::Temp;
+    use test_log::test;
+
+    /// Write a TOML string to a temporary file and return the temp handle.
+    fn write_toml(content: &str) -> Temp {
+        let tmp = Temp::new_file().expect("create temp file");
+        fs::write(tmp.as_path(), content).expect("write temp TOML");
+        tmp
+    }
+
+    #[test]
+    fn use_verbose_from_config_file() -> Result<()> {
+        let tmp = write_toml("verbose = \"debug\"\n");
+        let cli = Args::cli_no_flags();
+        let merged = cli.merge_with_config_file(tmp.as_path())?;
+        assert_eq!(merged.verbose.get_level_filter(), "Debug");
+        Ok(())
+    }
+
+    #[test]
+    fn cli_verbose_overrides_config() -> Result<()> {
+        let tmp = write_toml("verbose = \"debug\"\n");
+        let mut cli = Args::cli_no_flags();
+        cli.verbose = QuietVerbose {
+            verbosity_level: 0,
+            quiet_level: 1,
+        };
+        let merged = cli.merge_with_config_file(tmp.as_path())?;
+        assert_eq!(merged.verbose.get_level_filter(), "Error");
+        Ok(())
+    }
+
+    #[test]
+    fn use_delay_from_config_file() -> Result<()> {
+        let tmp = write_toml("delay = 120\n");
+        let cli = Args::cli_no_flags();
+        let merged = cli.merge_with_config_file(tmp.as_path())?;
+        assert_eq!(merged.delay, Some(120));
+        Ok(())
+    }
+
+    #[test]
+    fn cli_overrides_config_delay() -> Result<()> {
+        let tmp = write_toml("delay = 120\n");
+        let mut cli = Args::cli_no_flags();
+        cli.delay = Some(30);
+        let merged = cli.merge_with_config_file(tmp.as_path())?;
+        assert_eq!(merged.delay, Some(30));
+        Ok(())
+    }
+
+    #[test]
+    fn use_verbose_from_full_default_config_file() -> Result<()> {
+        // Generate the same TOML the program writes as default, then
+        // change verbose from "Info" to "Debug" — simulates a user edit.
+        let default_toml = toml::to_string(&Args::default())?;
+        let edited_toml = default_toml.replace("verbose = \"Info\"", "verbose = \"Debug\"");
+        assert!(
+            edited_toml.contains("verbose = \"Debug\""),
+            "Default config must contain a verbose line to edit. Got:\n{default_toml}"
+        );
+        let tmp = write_toml(&edited_toml);
+        let cli = Args::cli_no_flags();
+        let merged = cli.merge_with_config_file(tmp.as_path())?;
+        assert_eq!(merged.verbose.get_level_filter(), "Debug");
+        Ok(())
     }
 }
