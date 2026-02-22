@@ -56,8 +56,10 @@ jobs:
 #        run: |
 #          brew install alsa-lib
 #        if: matrix.os == 'macOS-latest'
-      - name: Test
+      - name: Install latest nextest release
+        uses: taiki-e/install-action@nextest
+      - name: Test with latest nextest release
         uses: actions-rs/cargo@v1
         with:
-          command: test
-
+          command: nextest
+          args: run --profile ci
