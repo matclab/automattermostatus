@@ -7,6 +7,9 @@ use anyhow::{Context, Result};
 
 #[paw::main]
 fn main(args: Args) -> Result<()> {
+    if args.expose_secrets {
+        ::lib::secret::enable_expose();
+    }
     let args = args
         .merge_config_and_params()?
         // Retrieve token if possible

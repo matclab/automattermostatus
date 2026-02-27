@@ -14,12 +14,14 @@ pub mod config;
 pub mod mattermost;
 pub mod micscan;
 pub mod offtime;
+pub mod secret;
 pub mod state;
 pub mod utils;
 pub mod wifiscan;
 pub use config::{AppConfig, Args, SecretType, WifiStatusConfig};
 pub use mattermost::{BaseSession, LoggedSession, MMCustomStatus, Session};
 use offtime::Off;
+pub use secret::Secret;
 pub use state::{Cache, Location, State};
 pub use wifiscan::{WiFi, WifiInterface};
 
@@ -78,9 +80,9 @@ pub fn create_session(config: &AppConfig) -> Result<LoggedSession> {
     let mut session: Box<dyn BaseSession> = match mm.secret_type {
         SecretType::Password => {
             let mm_user = mm.user.as_ref().context("Mattermost user is not defined")?;
-            Box::new(session.with_credentials(mm_user, &mm.secret))
+            Box::new(session.with_credentials(mm_user, mm.secret.expose()))
         }
-        SecretType::Token => Box::new(session.with_token(&mm.secret)),
+        SecretType::Token => Box::new(session.with_token(mm.secret.expose())),
     };
     loop {
         let res = session.login();
@@ -241,7 +243,7 @@ mod prepare_status_should {
                 .iter()
                 .map(|s| s.to_string())
                 .collect(),
-            mm_secret: Some("AAA".to_string()),
+            mm_secret: Some(Secret::new("AAA".to_string())),
             ..Default::default()
         };
         let config = args.validate()?;
@@ -273,7 +275,7 @@ mod validate_should {
     fn error_when_mm_url_is_none() -> Result<()> {
         let args = Args {
             status: vec!["a::b::c".to_string()],
-            mm_secret: Some("AAA".to_string()),
+            mm_secret: Some(Secret::new("AAA".to_string())),
             mm_url: None,
             ..Default::default()
         };
@@ -290,7 +292,7 @@ mod validate_should {
     fn error_when_delay_is_none() -> Result<()> {
         let args = Args {
             status: vec!["a::b::c".to_string()],
-            mm_secret: Some("AAA".to_string()),
+            mm_secret: Some(Secret::new("AAA".to_string())),
             delay: None,
             ..Default::default()
         };
@@ -306,7 +308,7 @@ mod validate_should {
     #[test]
     fn succeed_with_valid_args() -> Result<()> {
         let args = Args {
-            mm_secret: Some("secret".to_string()),
+            mm_secret: Some(Secret::new("secret".to_string())),
             ..Default::default()
         };
         let config = args.validate()?;
@@ -356,7 +358,7 @@ mod process_one_iteration_should {
                 url: server_url.to_string(),
                 user: None,
                 secret_type: SecretType::Token,
-                secret: "token".to_string(),
+                secret: Secret::new("token".to_string()),
             },
             schedule: ScheduleConfig {
                 begin: None,

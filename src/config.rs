@@ -3,6 +3,7 @@
 //!
 use crate::command::{CommandRunner, SystemCommandRunner};
 use crate::offtime::{Off, OffDays};
+use crate::secret::Secret;
 use crate::utils::parse_from_hmstr;
 use ::structopt::clap::AppSettings;
 use anyhow::{bail, Context, Result};
@@ -247,7 +248,7 @@ pub struct Args {
     /// `secret_type` option
     #[serde(skip_serializing_if = "Option::is_none")]
     #[structopt(long, env, hide_env_values = true, name = "token")]
-    pub mm_secret: Option<String>,
+    pub mm_secret: Option<Secret>,
 
     /// mattermost secret command
     ///
@@ -307,6 +308,11 @@ pub struct Args {
     #[structopt(skip)]
     /// Days off for which the custom status shall not be changed
     pub offdays: OffDays,
+
+    /// Show secret values in debug log output
+    #[structopt(long)]
+    #[serde(skip)]
+    pub expose_secrets: bool,
 }
 
 impl Default for Args {
@@ -341,6 +347,7 @@ impl Default for Args {
             begin: Some("8:00".to_string()),
             end: Some("19:30".to_string()),
             offdays: OffDays::default(),
+            expose_secrets: false,
         };
         res
     }
@@ -372,7 +379,7 @@ pub struct MattermostConfig {
     /// Authentication type
     pub secret_type: SecretType,
     /// Authentication secret (password or token)
-    pub secret: String,
+    pub secret: Secret,
 }
 
 /// Validated schedule configuration.
@@ -498,7 +505,7 @@ impl Args {
                 let secret = keyring.get_password().with_context(|| {
                     format!("Querying OS keyring (user: {user}, service: {service})")
                 })?;
-                self.mm_secret = Some(secret);
+                self.mm_secret = Some(Secret::new(secret));
             } else {
                 warn!("User is defined for keyring lookup but service is not");
                 info!("Skipping keyring lookup");
@@ -530,7 +537,7 @@ impl Args {
             if secret.is_empty() {
                 bail!("command '{}' returns nothing", &command);
             }
-            self.mm_secret = Some(secret);
+            self.mm_secret = Some(Secret::new(secret));
         }
         Ok(self)
     }
@@ -602,6 +609,7 @@ impl Args {
                 quiet_level: 0,
             },
             offdays: OffDays::default(),
+            expose_secrets: false,
         }
     }
 }

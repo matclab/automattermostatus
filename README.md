@@ -17,7 +17,7 @@ page](https://gitlab.com/matclab/automattermostatus/-/releases).
 Here after is the command line help.
 <!-- `$ target/debug/automattermostatus --help` as text -->
 ```text
-automattermostatus 0.2.6
+automattermostatus 0.2.7
 Automate mattermost status with the help of wifi network
 
 Use current visible wifi SSID to automate your mattermost status. This program is meant to either be running in
@@ -28,18 +28,21 @@ USAGE:
     automattermostatus [FLAGS] [OPTIONS]
 
 FLAGS:
-    -h, --help       
+        --expose-secrets    
+            Show secret values in debug log output
+
+    -h, --help              
             Prints help information
 
-    -q, --quiet      
+    -q, --quiet             
             Decrease the output's verbosity level.
             
             Used once, it will set error log level. Used twice, will silent the log completely
-    -v, --verbose    
+    -v, --verbose           
             Increase the output's verbosity level
             
             Pass many times to increase verbosity level, up to 3.
-    -V, --version    
+    -V, --version           
             Prints version information
 
 

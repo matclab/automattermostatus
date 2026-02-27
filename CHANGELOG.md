@@ -1,10 +1,15 @@
-# v0.2.7  **TODO**
+# v0.2.7
 
 Allows a virtual "Ethernet" SSID in the `status` config in order to take
 account an Ethernet connexion when wifi is disabled.
 
+## Security
 
-## Fixed Bug 
+- Secrets (passwords/tokens) are now redacted (`***`) in debug log output.
+  A new `--expose-secrets` CLI flag allows revealing them when debugging
+  authentication issues.
+
+## Fixed Bug
 - `verbose` option set up in the config file was not taken into account.
 
 
