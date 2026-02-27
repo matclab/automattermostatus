@@ -20,8 +20,14 @@ status = ["corporatewifi::office::On premise work",
 # Base url of the mattermost instanbce
 mm_url = 'https://mattermost.example.com'
 
-# Mattermost staus will be set to *do not disturb* when one of those
+# Mattermost status will be set to *do not disturb* when one of those
 # applications use the microphone.
+# Unlike SSID matching (which uses substring), application names must match
+# exactly (case-sensitive). The expected format depends on the platform:
+#  - Linux (PulseAudio): binary name, e.g. 'firefox', 'zoom'
+#  - Linux (ALSA): full command path, e.g. '/usr/bin/firefox'
+#  - Windows: executable file name with extension, e.g. 'Zoom.exe', 'Teams.exe'
+#  - macOS: use 'unknown' (specific app detection is not supported)
 mic_app_names = [ 'zoom', 'firefox', 'chromium' ]
 
 # Level of verbosity among Off, Error, Warn, Info, Debug, Trace
