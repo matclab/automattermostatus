@@ -326,6 +326,7 @@ pub struct Args {
     pub verbose: QuietVerbose,
 
     #[structopt(skip)]
+    #[serde(default)]
     /// Days off for which the custom status shall not be changed
     pub offdays: OffDays,
 
@@ -561,7 +562,7 @@ impl Args {
             let args: Vec<String> = params[1..].to_vec();
             let secret = runner
                 .run(&params[0], args)
-                .with_context(|| format!("Error when running {}", &command))?;
+                .with_context(|| format!("Error when running {}", command))?;
             if secret.is_empty() {
                 bail!("command '{}' returns nothing", &command);
             }
@@ -576,7 +577,7 @@ impl Args {
             .context("Unable to find a project dir")?;
         let conf_dir = project_dirs.config_dir().to_owned();
         fs::create_dir_all(&conf_dir)
-            .with_context(|| format!("Creating conf dir {:?}", &conf_dir))?;
+            .with_context(|| format!("Creating conf dir {:?}", conf_dir))?;
         let conf_file = conf_dir.join("automattermostatus.toml");
         if !conf_file.exists() {
             info!("Write {:?} default config file", &conf_file);

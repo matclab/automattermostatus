@@ -17,7 +17,7 @@ page](https://gitlab.com/matclab/automattermostatus/-/releases).
 Here after is the command line help.
 <!-- `$ target/debug/automattermostatus --help` as text -->
 ```text
-automattermostatus 0.2.7
+automattermostatus 0.2.8
 Automate mattermost status with the help of wifi network
 
 Use current visible wifi SSID to automate your mattermost status. This program is meant to either be running in
@@ -191,10 +191,16 @@ end = "19:30"
 # - `EveryWeek`: the day is always off
 # - `EvenWeek`: the day is off on even week (iso week number)
 # - `OddWeek`: the day is off on odd week (iso week number)
+#
+# For half-day off entries, append `_morning` or `_afternoon` to the weekday:
+# - `Wed_morning = 'EveryWeek'` : off every Wednesday morning
+# - `Thu_afternoon = 'EvenWeek'` : off every Thursday afternoon on even weeks
+# Omit the suffix for full-day off.
 [offdays]
 Sat = 'EveryWeek'
 Sun = 'EveryWeek'
-Wed = 'EvenWeek'
+Wed_morning = 'EvenWeek'
+Thu_afternoon = 'OddWeek'
 
 ```
 

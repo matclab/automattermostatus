@@ -1,5 +1,25 @@
 # v0.2.8
 
+## Feature
+
+- Half-day off entries: append `_morning` or `_afternoon` to weekday keys in
+  the `[offdays]` section for partial day off. Omit the suffix for full-day off.
+
+  Example:
+  ```toml
+  [offdays]
+  Sat = 'EveryWeek'              # full day
+  Wed_morning = 'EvenWeek'       # morning only, even weeks
+  Thu_afternoon = 'OddWeek'      # afternoon only, odd weeks
+  ```
+
+  The part is determined by the current hour: before 13:00 is morning, from
+  13:00 onwards is afternoon.
+
+- Add Windows service support (tentative)
+
+# v0.2.7
+
 Allows a virtual "Ethernet" SSID in the `status` config in order to take
 account an Ethernet connexion when wifi is disabled.
 

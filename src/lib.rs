@@ -51,7 +51,7 @@ pub fn get_cache(dir: Option<PathBuf>) -> Result<Cache> {
     if let Some(ref state_dir) = dir {
         state_file_name = PathBuf::from(state_dir);
         fs::create_dir_all(state_dir)
-            .with_context(|| format!("Creating cache dir {:?}", &state_dir))?;
+            .with_context(|| format!("Creating cache dir {:?}", state_dir))?;
     } else {
         bail!("Internal Error, no `state_dir` configured");
     }
