@@ -3,7 +3,6 @@
 use anyhow::{bail, Context, Result};
 use std::fs;
 use std::path::PathBuf;
-use std::thread::sleep;
 use std::{collections::HashMap, time};
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::prelude::*;
@@ -15,6 +14,9 @@ pub mod mattermost;
 pub mod micscan;
 pub mod offtime;
 pub mod secret;
+#[cfg(target_os = "windows")]
+pub mod service;
+pub mod shutdown;
 pub mod state;
 pub mod utils;
 pub mod wifiscan;
@@ -22,6 +24,7 @@ pub use config::{AppConfig, Args, SecretType, WifiStatusConfig};
 pub use mattermost::{BaseSession, LoggedSession, MMCustomStatus, Session};
 use offtime::Off;
 pub use secret::Secret;
+pub use shutdown::ShutdownSignal;
 pub use state::{Cache, Location, State};
 pub use wifiscan::{WiFi, WifiInterface};
 
@@ -73,7 +76,10 @@ pub fn prepare_status(config: &AppConfig) -> Result<HashMap<Location, MMCustomSt
 }
 
 /// Create [`Session`] according to the mattermost configuration.
-pub fn create_session(config: &AppConfig) -> Result<LoggedSession> {
+///
+/// The login attempt is retried indefinitely until it succeeds or the
+/// [`ShutdownSignal`] is triggered.
+pub fn create_session(config: &AppConfig, shutdown: &ShutdownSignal) -> Result<LoggedSession> {
     let mm = &config.mattermost;
     let delay_duration = time::Duration::new(config.schedule.delay.into(), 0);
     let mut session = Session::new(&mm.url);
@@ -91,7 +97,9 @@ pub fn create_session(config: &AppConfig) -> Result<LoggedSession> {
             return Ok(session);
         } else {
             error!("Failed to access mattermost API {:?}", res);
-            sleep(delay_duration);
+            if shutdown.sleep_or_stop(delay_duration) {
+                bail!("Shutdown requested during login retry");
+            }
         }
     }
 }
@@ -177,9 +185,13 @@ pub fn process_one_iteration(
 
 /// Main application loop, looking for a known SSID and updating
 /// mattermost custom status accordingly.
+///
+/// The loop runs until `delay == 0` (single-shot mode) or the
+/// [`ShutdownSignal`] is triggered.
 pub fn get_wifi_and_update_status_loop(
     config: AppConfig,
     mut status_dict: HashMap<Location, MMCustomStatus>,
+    shutdown: ShutdownSignal,
 ) -> Result<()> {
     let cache = get_cache(Some(config.state_dir.clone())).context("Reading cached state")?;
     let mut state = State::new(&cache).context("Creating cache")?;
@@ -190,9 +202,13 @@ pub fn get_wifi_and_update_status_loop(
     } else {
         info!("Wifi is disabled, will check for ethernet fallback");
     }
-    let mut session = create_session(&config)?;
+    let mut session = create_session(&config, &shutdown)?;
     let mut micusage = micscan::MicUsage::new();
     loop {
+        if shutdown.is_shutdown_requested() {
+            info!("Shutdown requested, exiting main loop");
+            break;
+        }
         process_one_iteration(
             &wifi,
             &mut micusage,
@@ -205,8 +221,9 @@ pub fn get_wifi_and_update_status_loop(
         )?;
         if config.schedule.delay == 0 {
             break;
-        } else {
-            sleep(delay_duration);
+        } else if shutdown.sleep_or_stop(delay_duration) {
+            info!("Shutdown requested during sleep, exiting main loop");
+            break;
         }
     }
     Ok(())

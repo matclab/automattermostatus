@@ -284,9 +284,33 @@ journalctl --user -u automattermostatus
 
 ### Windows
 
-To launch at start-up, you can copy/paste the binary in
-`C:\Users[user_name]\AppData\Roaming\Microsoft\Windows\Start
-Menu\Programs\Startup`, but a terminal will appear at every session startup.
+#### As a Windows service (recommended)
+
+You can install *automattermostatus* as a native Windows service visible in
+`services.msc`. Open an **elevated** (Administrator) terminal and run:
+
+```powershell
+automattermostatus.exe service install
+```
+
+The service starts automatically at boot and runs in the background. Logs are
+written to `C:\ProgramData\automattermostatus\automattermostatus.log`.
+
+To remove the service:
+
+```powershell
+automattermostatus.exe service uninstall
+```
+
+Configuration is read from the standard config file (see
+[Config File](#config-file) above).
+
+#### Via the Startup folder
+
+Alternatively, you can copy the binary into
+`C:\Users\<user_name>\AppData\Roaming\Microsoft\Windows\Start
+Menu\Programs\Startup`, but a terminal window will appear at every session
+startup.
 
 
 ### Mac OS

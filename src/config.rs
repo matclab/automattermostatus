@@ -33,6 +33,26 @@ pub enum SecretType {
 }
 }
 
+/// Windows service management subcommand.
+#[cfg(target_os = "windows")]
+#[derive(structopt::StructOpt, Debug)]
+pub enum ServiceCommand {
+    /// Manage the Windows service
+    Service(ServiceAction),
+}
+
+/// Action to perform on the Windows service.
+#[cfg(target_os = "windows")]
+#[derive(structopt::StructOpt, Debug)]
+pub enum ServiceAction {
+    /// Install as a Windows service
+    Install,
+    /// Uninstall the Windows service
+    Uninstall,
+    /// Run as a Windows service (called by SCM, not for manual use)
+    Run,
+}
+
 /// Status that shall be send when a wifi with `wifi_string` is being seen.
 #[derive(Debug, PartialEq)]
 pub struct WifiStatusConfig {
@@ -313,6 +333,12 @@ pub struct Args {
     #[structopt(long)]
     #[serde(skip)]
     pub expose_secrets: bool,
+
+    /// Windows service subcommand (install / uninstall / run)
+    #[cfg(target_os = "windows")]
+    #[structopt(subcommand)]
+    #[serde(skip)]
+    pub service_cmd: Option<ServiceCommand>,
 }
 
 impl Default for Args {
@@ -348,6 +374,8 @@ impl Default for Args {
             end: Some("19:30".to_string()),
             offdays: OffDays::default(),
             expose_secrets: false,
+            #[cfg(target_os = "windows")]
+            service_cmd: None,
         };
         res
     }
@@ -610,6 +638,8 @@ impl Args {
             },
             offdays: OffDays::default(),
             expose_secrets: false,
+            #[cfg(target_os = "windows")]
+            service_cmd: None,
         }
     }
 }
