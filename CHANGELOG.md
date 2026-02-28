@@ -1,4 +1,4 @@
-# v0.2.7
+# v0.2.8
 
 Allows a virtual "Ethernet" SSID in the `status` config in order to take
 account an Ethernet connexion when wifi is disabled.
@@ -10,8 +10,8 @@ account an Ethernet connexion when wifi is disabled.
   authentication issues.
 
 ## Fixed Bug
-- `verbose` option set up in the config file was not taken into account.
 
+- `verbose` option set up in the config file was not taken into account.
 
 # v0.2.6 
 
